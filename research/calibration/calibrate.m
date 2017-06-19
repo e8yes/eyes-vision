@@ -75,14 +75,14 @@ function [cam,Pcam,Pworld] = calibrate(imfile, left);
               0      cos(params_opt(2))      -sin(params_opt(2));
               0      sin(params_opt(2))      cos(params_opt(2))];
         
-        Ry = [cos(params_opt(3))            0       sin(params_opt(3));
+        Ry = [cos(params_opt(3))            0       -sin(params_opt(3));
               0                             1       0;
-              -sin(params_opt(3))           0       cos(params_opt(3))];
+              sin(params_opt(3))           0       cos(params_opt(3))];
         
-        Rz = [cos(params_opt(4))            -sin(params_opt(4))     0
-              sin(params_opt(4))            cos(params_opt(4))      0
+        Rz = [cos(params_opt(4))            -sin(params_opt(4))     0;
+              sin(params_opt(4))            cos(params_opt(4))      0;
               0                             0                       1];
-        cam.R = Rz*Ry*Rx;
+        cam.R = Rx*Rz*Ry;
         cam.t = [params_opt(5); params_opt(6); params_opt(7)];
         cam.c = [cx; cy];
         

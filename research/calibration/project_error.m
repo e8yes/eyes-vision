@@ -32,14 +32,14 @@ function err = project_error(params,X,xL,cx,cy)
               0      cos(params(2))  -sin(params(2));
               0      sin(params(2))  cos(params(2))];
               
-        Ry = [cos(params(3))         0       sin(params(3));
+        Ry = [cos(params(3))         0      -sin(params(3));
               0                      1       0;
-              -sin(params(3))        0       cos(params(3))];
+              sin(params(3))        0       cos(params(3))];
               
-        Rz = [cos(params(4))         -sin(params(4))  0
-              sin(params(4))         cos(params(4))   0
+        Rz = [cos(params(4))         -sin(params(4))  0;
+              sin(params(4))         cos(params(4))   0;
               0                      0                1];
-        cam.R = Rz*Ry*Rx;
+        cam.R = Rx*Rz*Ry;
         cam.t = [params(5); params(6); params(7)];
 
         % compute projection
