@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include "testrunner.h"
+#include "testextractor.h"
 
 
 test::test_runner::test_runner()
@@ -56,6 +57,7 @@ test::test_runner
 test::load(int argc, char** argv)
 {
         test_runner runner;
+        runner.add("test_extractor", new test_extractor(), false);
 
         for (int i = 1; i < argc; i ++) {
                 if ((!std::strcmp(argv[i], "--test") || !std::strcmp(argv[i], "-t")) && (i + 1 < argc)) {
