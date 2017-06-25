@@ -27,11 +27,41 @@ e8::checker_calibrator::~checker_calibrator()
 {
 }
 
+static bool
+is_point_in_line(cv::Vec2i const& p, cv::Vec4i const& line, float threshold)
+{
+        cv::Vec2f const& v = cv::Vec2f(p[0], p[1]) - cv::Vec2f(line[0], line[1]);
+        cv::Vec2f l = cv::Vec2f(line[2], line[3]) - cv::Vec2f(line[0], line[1]);
+        float len = std::sqrt(l.dot(l));
+        l /= len;
+        float comp_lv = l.dot(v);
+
+        float bias = len*threshold;
+        if (comp_lv < -bias || comp_lv > len + bias)
+                return false;
+        return v.dot(v) - comp_lv*comp_lv < bias*bias;
+}
+
+static bool
+is_point_on_the_left(cv::Vec2i const& p, cv::Vec4i const& line)
+{
+        cv::Vec3f const& l = cv::Vec3f(line[2], line[3], 0) - cv::Vec3f(line[0], line[1], 0);
+        cv::Vec3f const& v = cv::Vec3f(p[0], p[1], 0) - cv::Vec3f(line[0], line[1], 0);
+        cv::Vec3f const& z = l.cross(v);
+        return z[2] < 0;
+}
+
+static bool
+is_point_on_the_right(cv::Vec2i const& p, cv::Vec4i const& line)
+{
+        return !is_point_on_the_left(p, line);
+}
+
 bool
 e8::checker_calibrator::is_equivalent_lines(cv::Vec4i const& a, cv::Vec4i const& b, cv::Vec2i const&, cv::Vec2i const&) const
 {
-        cv::Vec3f va = cv::Vec3f(a[0], a[1], 1.0f) - cv::Vec3f(a[2], a[3], 1.0f);
-        cv::Vec3f vb = cv::Vec3f(b[0], b[1], 1.0f) - cv::Vec3f(b[2], b[3], 1.0f);
+        cv::Vec3f va = cv::Vec3f(a[0], a[1], 0) - cv::Vec3f(a[2], a[3], 0);
+        cv::Vec3f vb = cv::Vec3f(b[0], b[1], 0) - cv::Vec3f(b[2], b[3], 0);
 
         // normalize.
         float la = std::sqrt(va.dot(va));
@@ -54,6 +84,25 @@ e8::checker_calibrator::is_equivalent_lines(cv::Vec4i const& a, cv::Vec4i const&
         return true;
 }
 
+unsigned
+e8::checker_calibrator::count_point_in_region(std::vector<keypoint> const& kps, cv::Vec4i const& x, cv::Vec4i const& y) const
+{
+        unsigned in_region = 0;
+        for (unsigned i = 0; i < kps.size(); i ++) {
+                keypoint const& kp = kps[i];
+
+                // if the point lies on any of the axes.
+                if (is_point_in_line(kp.kp, x, 0.05f) ||
+                    is_point_in_line(kp.kp, y, 0.05f))
+                        continue;
+
+                if (is_point_on_the_left(kp.kp, x) &&
+                    is_point_on_the_right(kp.kp, y))
+                        in_region ++;
+        }
+        return in_region;
+}
+
 std::vector<cv::Vec4i>
 e8::checker_calibrator::find_principle_axes(std::vector<cv::Vec4i> const& lines, std::vector<keypoint> const& kps) const
 {
@@ -64,45 +113,88 @@ e8::checker_calibrator::find_principle_axes(std::vector<cv::Vec4i> const& lines,
                         candids.push_back(kps[i]);
         }
 
-        // exclude maximas.
-        keypoint const* central = nullptr;
-        std::vector<cv::Vec4i> axes;
-        std::vector<cv::Vec4i> ordered_axes;
+        // exclude non-central axes.
+        std::vector<cv::Vec4i> axes(3);
+        std::vector<cv::Vec4i> ordered_axes(3);
         for (unsigned i = 0; i < candids.size(); i ++) {
                 // principle axes are lines that each pair of them separates a region,
                 // and each of those regions must consist of equal number of lines.
 
+                // test if the line is flipped and move them into the axes in arbitrary order.
                 keypoint const& c = candids[i];
-                axes.clear();
-                for (cv::Vec4i const& line: c.lines) {
-                        // test if the line is flipped.
+                unsigned axis = 0;
+                for (unsigned il: c.lines) {
+                        cv::Vec4i const& line = lines[il];
                         cv::Vec2i d_a = cv::Vec2i(line[0], line[1]) - c.kp;
                         cv::Vec2i d_b = cv::Vec2i(line[2], line[3]) - c.kp;
                         if (d_a.dot(d_a) < d_b.dot(d_b)) {
                                 // the line is good.
-                                axes.push_back(line);
+                                axes[axis ++] = cv::Vec4i(c.kp[0], c.kp[1], line[2], line[3]);
                         } else {
                                 // the line is flipped.
-                                axes.push_back(line);
+                                axes[axis ++] = cv::Vec4i(c.kp[0], c.kp[1], line[0], line[1]);
                         }
                 }
 
-                // make lines into correct order.
-                cv::Vec2i y(0, 1);
-                cv::Vec2i x(1, 0);
+                // make axes the correct order.
+                // dot product against the global y axis will divide the 3 axes into two classes a and b.
+                cv::Vec2i global_y(0, 1);
+                unsigned a[3];
+                unsigned b[3];
+                unsigned as = 0;
+                unsigned bs = 0;
+                for (unsigned i = 0; i < 3; i ++) {
+                        cv::Vec2i const& v = cv::Vec2i(axes[i][2], axes[i][3]) - cv::Vec2i(axes[i][0], axes[i][1]);
+                        if (v.dot(global_y) < 0)        b[bs ++] = i;
+                        else                            a[as ++] = i;
+                }
+                // the class with 1 element is the z axis while the other contains the x and y axes.
+                unsigned* xy;
+                if (as == 1) {
+                        ordered_axes[2] = axes[a[0]];
+                        xy = b;
+                } else if (bs == 1) {
+                        ordered_axes[2] = axes[b[0]];
+                        xy = a;
+                } else {
+                        // failed.
+                        continue;
+                }
 
+                // we can produce the local x axis and the dot product against this local x axis
+                // will divide the xy class into the x and y axis respectively.
+                cv::Vec3f local_z(ordered_axes[2][0], ordered_axes[2][1], 0.0f);
+                cv::Vec3f global_z(0, 0, 1);
+                cv::Vec3f const& local_x3 = global_z.cross(local_z);
+                cv::Vec2i local_x(local_x3[0], local_x3[1]);
+
+                for (unsigned i = 0; i < 2; i ++) {
+                        cv::Vec2i const& v = cv::Vec2i(axes[xy[i]][2], axes[xy[i]][3]) - cv::Vec2i(axes[xy[i]][0], axes[xy[i]][1]);
+                        if (local_x.dot(v) > 0) ordered_axes[0] = axes[xy[i]];
+                        else                    ordered_axes[1] = axes[xy[i]];
+                }
+
+                // now count the number of points in the separated region.
+                unsigned xy_region = count_point_in_region(kps, ordered_axes[0], ordered_axes[1]);
+                unsigned yz_region = count_point_in_region(kps, ordered_axes[1], ordered_axes[2]);
+                unsigned zx_region = count_point_in_region(kps, ordered_axes[2], ordered_axes[0]);
+
+                if (xy_region == yz_region && yz_region == zx_region) {
+                        // there is a match, and we found the central axes.
+                        return ordered_axes;
+                }
         }
 
-        if (central == nullptr)
-                return std::vector<cv::Vec4i>();
-        else
-                return ordered_axes;
+        // no matching axes.
+        return std::vector<cv::Vec4i>();
 }
 
 std::vector<cv::Vec4i>
 e8::checker_calibrator::partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines, std::vector<keypoint> const& kps) const
 {
         std::vector<cv::Vec4i> const& axes = find_principle_axes(lines, kps);
+        if (axes.empty())
+                return axes;
         return axes;
 }
 
@@ -234,9 +326,8 @@ e8::checker_calibrator::keypoints(std::vector<cv::Vec4i> const& lines, cv::Vec2i
                         cv::Vec2f t;
                         cv::solve(v, o, t);
 
-                        if (t[0] < -bias || t[0] > 1.0f + bias)
-                                continue;
-                        if (t[1] < -bias || t[1] > 1.0f + bias)
+                        if (t[0] < -bias || t[0] > 1.0f + bias ||
+                            t[1] < -bias || t[1] > 1.0f + bias)
                                 continue;
 
                         cv::Vec2f const& p = cv::Vec2f(li[0], li[1]) + vi*t[0];

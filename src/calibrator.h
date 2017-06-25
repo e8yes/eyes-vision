@@ -51,6 +51,7 @@ protected:
         };
 
         bool                    is_equivalent_lines(cv::Vec4i const& a, cv::Vec4i const& b, cv::Vec2i const& pmin, cv::Vec2i const& pmax) const;
+        unsigned                count_point_in_region(std::vector<keypoint> const& kps, cv::Vec4i const& x, cv::Vec4i const& y) const;
         std::vector<cv::Vec4i>  find_principle_axes(std::vector<cv::Vec4i> const& lines, std::vector<keypoint> const& kps) const;
         std::vector<cv::Vec4i>  partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines, std::vector<keypoint> const& kps) const;
         cv::Matx33f             homography(std::vector<cv::Vec2i> const& kps) const;
