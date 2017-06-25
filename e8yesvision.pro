@@ -22,7 +22,8 @@ SOURCES += src/main.cpp\
     src/camera.cpp \
     src/stereo.cpp \
     test/testextractor.cpp \
-    src/util.cpp
+    src/util.cpp \
+    test/testcalibrator.cpp
 
 HEADERS  += src/mainwindow.h \
     test/test.h \
@@ -33,7 +34,8 @@ HEADERS  += src/mainwindow.h \
     src/camera.h \
     src/stereo.h \
     test/testextractor.h \
-    src/util.h
+    src/util.h \
+    test/testcalibrator.h
 
 LIBS += -lopencv_core
 LIBS += -lopencv_imgcodecs

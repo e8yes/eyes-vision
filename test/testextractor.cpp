@@ -15,8 +15,8 @@ test::test_extractor::~test_extractor()
 void
 test::test_extractor::run() const
 {
-        cv::Mat I0 = cv::imread("res/fgbg/fg2.jpg", cv::IMREAD_COLOR);
-        cv::Mat I1 = cv::imread("res/fgbg/bg2.jpg", cv::IMREAD_COLOR);
+        cv::Mat I0 = cv::imread("res/fgbg/fg3.jpg", cv::IMREAD_COLOR);
+        cv::Mat I1 = cv::imread("res/fgbg/bg3.jpg", cv::IMREAD_COLOR);
 
         cv::Mat3f fg(I0.size());
         cv::Mat3f bg(I1.size());
