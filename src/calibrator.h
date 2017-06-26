@@ -39,29 +39,6 @@ public:
         bool            detect(cv::Mat& detect_map) override;
         bool            calibrate(camera& cam, cv::Mat& project_map) const override;
 protected:
-        struct keypoint
-        {
-                keypoint(cv::Vec2i const& kp, std::set<unsigned> const& lines):
-                        kp(kp), lines(lines)
-                {
-                }
-
-                cv::Vec2i               kp;
-                std::set<unsigned>      lines;
-        };
-
-        bool                    is_equivalent_lines(cv::Vec4i const& a, cv::Vec4i const& b, cv::Vec2i const& pmin, cv::Vec2i const& pmax) const;
-        unsigned                count_point_in_region(std::vector<keypoint> const& kps, cv::Vec4i const& x, cv::Vec4i const& y) const;
-        std::vector<cv::Vec4i>  find_principle_axes(std::vector<cv::Vec4i> const& lines, std::vector<keypoint> const& kps) const;
-        std::vector<cv::Vec4i>  partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines, std::vector<keypoint> const& kps) const;
-        cv::Matx33f             homography(std::vector<cv::Vec2i> const& kps) const;
-        std::vector<cv::Vec2f>  correspondences(std::vector<cv::Vec2i> const& kps) const;
-        std::vector<cv::Vec4i>  hough_lines(cv::Mat1b const& edges, cv::Vec2i const& pmin, cv::Vec2i const& pmax) const;
-        std::vector<cv::Vec4i>  merge(std::vector<cv::Vec4i> const& lines, cv::Vec2i const& pmin, cv::Vec2i const& pmax) const;
-        std::vector<cv::Vec4i>  vectorize(cv::Mat1b const& edges, cv::Vec2i const& pmin, cv::Vec2i const& pmax) const;
-        std::vector<keypoint>   keypoints(std::vector<cv::Vec4i> const& lines, cv::Vec2i const& pmin, cv::Vec2i const& pmax) const;
-        cv::Mat1b               binarize(cv::Mat1b const& image, cv::Vec2i& pmin, cv::Vec2i& pmax) const;
-
         cv::Mat1b const&        m_checker;
         float                   m_width;
         unsigned                m_grids;
