@@ -44,7 +44,11 @@ protected:
         unsigned                m_grids;
         camera const&           m_init;
 
+        float                   m_thickness;
+        cv::Vec2i               m_scale;
+
         std::vector<cv::Vec2i>  m_planes[3];
+        cv::Vec4i               m_axes[3];
 };
 
 }

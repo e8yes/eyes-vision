@@ -29,6 +29,52 @@ struct principle_region
         std::vector<unsigned>   kps;
 };
 
+static void
+draw_points(cv::Mat& mat, std::vector<cv::Vec2f> const& kps, unsigned thickness, cv::Scalar const& color)
+{
+        for (unsigned i = 0; i < kps.size(); i ++) {
+                cv::Vec2i const& p = cv::Vec2i(static_cast<unsigned>(kps[i][0]), static_cast<unsigned>(kps[i][1]));
+                cv::circle(mat, p, thickness, color, thickness/2);
+        }
+}
+
+static void
+draw_keypoints(cv::Mat& mat, std::vector<keypoint> const& kps, unsigned thickness, cv::Scalar const& color)
+{
+        for (unsigned i = 0; i < kps.size(); i ++) {
+                keypoint const& p = kps[i];
+                cv::circle(mat, p.kp, thickness, color, thickness/2);
+        }
+}
+
+static void
+draw_lines(cv::Mat& mat, std::vector<cv::Vec4i> const& lines, unsigned thickness, cv::Scalar const& color)
+{
+        for (unsigned i = 0; i < lines.size(); i ++) {
+                cv::Vec4i const& line = lines[i];
+                cv::line(mat, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), color, thickness);
+        }
+}
+
+static void
+draw_principle_region(cv::Mat& mat, cv::Vec4i const* axes, std::vector<cv::Vec2i> const* kps, unsigned thickness)
+{
+        cv::Scalar colors[3] = {cv::Scalar(0, 0, 255), cv::Scalar(0, 255, 0), cv::Scalar(255, 0, 0)};
+        unsigned shift_scale = thickness*5;
+        cv::Vec2i shift[3] = {cv::Vec2i(0, shift_scale), cv::Vec2i(shift_scale, 0), cv::Vec2i(-shift_scale, 0)};
+
+        for (unsigned j = 0; j < 3; j ++) {
+                // draw axis.
+                cv::Vec4i const& axis = axes[j];
+                cv::line(mat, cv::Point(axis[0], axis[1]), cv::Point(axis[2], axis[3]), colors[j], thickness);
+
+                // draw key point order.
+                for (unsigned i = 0; i < kps[j].size(); i ++) {
+                        cv::putText(mat, std::to_string(i), kps[j][i] + shift[j], cv::FONT_HERSHEY_COMPLEX_SMALL, 1.5, colors[j], 2, CV_AA);
+                }
+        }
+}
+
 static bool
 is_point_on_line(cv::Vec2i const& p, cv::Vec4i const& line, float threshold)
 {
@@ -256,7 +302,7 @@ partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines,
                         }
                 });
 
-                // sort each line group based on the line basis.
+                // sort each line group based on the line axis.
                 for (unsigned i = 0; i < line_grp.size(); i ++) {
                         std::vector<unsigned>& ikps = group[line_grp[i].first];
                         cv::Vec4i const& line_axis = line_grp[i].second;
@@ -290,13 +336,68 @@ partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines,
 }
 
 static cv::Matx33f
-homography(std::vector<cv::Vec2i> const& kps)
+projective_transform(std::vector<cv::Vec2i> const& kps)
 {
+        unsigned dimension = static_cast<unsigned>(std::sqrt(kps.size()));
+
+        cv::Mat1f a = cv::Mat1f::zeros(3*kps.size(), 9);
+        cv::Mat1f b = cv::Mat1f::zeros(3*kps.size(), 1);
+        for (unsigned j = 0; j < kps.size(); j ++) {
+                unsigned px = j % dimension;
+                unsigned py = j / dimension;
+
+                unsigned mj = j*3;
+                // Px(k)        Py(k)   1       0       0       0       0       0       0
+                // 0            0       0       Px(k)   Py(k)   1       0       0       0
+                // 0            0       0       0       0       0       Px(k)   Py(k)   1
+                a.at<float>(mj + 0, 0) = px;
+                a.at<float>(mj + 0, 1) = py;
+                a.at<float>(mj + 0, 2) = 1;
+
+                a.at<float>(mj + 1, 3) = px;
+                a.at<float>(mj + 1, 4) = py;
+                a.at<float>(mj + 1, 5) = 1;
+
+                a.at<float>(mj + 2, 6) = px;
+                a.at<float>(mj + 2, 7) = py;
+                a.at<float>(mj + 2, 8) = 1;
+
+                // Qx(k);       Qy(k);  1;      ...
+                b.at<float>(mj + 0, 0) = kps[j][0];
+                b.at<float>(mj + 1, 0) = kps[j][1];
+                b.at<float>(mj + 2, 0) = 1;
+        }
+
+        cv::Mat1f x(9, 1);
+        cv::solve(a, b, x, cv::DECOMP_SVD);
+
+        // load the least square solution to h.
+        cv::Matx33f h;
+        for (unsigned j = 0; j < 3; j ++) {
+                for (unsigned i = 0; i < 3; i ++) {
+                        h(j, i) = x.at<float>(i + j*3, 0);
+                }
+        }
+        return h;
 }
 
 static std::vector<cv::Vec2f>
-correspondences(std::vector<cv::Vec2i> const& kps)
+correspondences(std::vector<cv::Vec2i> const& kps, unsigned dimension)
 {
+        cv::Matx33f const& h = projective_transform(kps);
+
+        std::vector<cv::Vec2f> pts(dimension*dimension);
+        for (unsigned j = 0; j < dimension; j ++) {
+                unsigned size = static_cast<unsigned>(std::sqrt(kps.size()));
+
+                for (unsigned i = 0; i < dimension; i ++) {
+                        float const y = (size - 1)*static_cast<float>(j)/(dimension - 1);
+                        float const x = (size - 1)*static_cast<float>(i)/(dimension - 1);
+                        cv::Vec3f const& c = h*cv::Vec3f(x, y, 1.0f);
+                        pts[i + j*dimension] = cv::Vec2f(c[0]/c[2], c[1]/c[2]);
+                }
+        }
+        return pts;
 }
 
 static std::vector<cv::Vec4i>
@@ -512,6 +613,8 @@ binarize(cv::Mat1b const& image, cv::Vec2i& pmin, cv::Vec2i& pmax)
         return bw;
 }
 
+
+
 e8::if_calibrator::if_calibrator()
 {
 }
@@ -551,18 +654,14 @@ e8::checker_calibrator::detect(cv::Mat& detect_map)
         // get key points.
         std::vector<keypoint> const& kps = keypoints(lines, pmin, pmax);
 
-        // draw result onto the detect map.
-        cv::Vec2i const& scale = pmax - pmin;
-        float thickness = (scale[0] + scale[1])/2 * 0.005f;
+        m_scale = pmax - pmin;
+        m_thickness = (m_scale[0] + m_scale[1])/2 * 0.005f;
         detect_map = cv::Mat3i::zeros(edges.size());
-        for (unsigned i = 0; i < lines.size(); i ++) {
-                cv::Vec4i const& line = lines[i];
-                cv::line(detect_map, cv::Point(line[0], line[1]), cv::Point(line[2], line[3]), cv::Scalar(255, 255, 255), thickness);
-        }
-        for (unsigned i = 0; i < kps.size(); i ++) {
-                keypoint const& p = kps[i];
-                cv::circle(detect_map, p.kp, thickness, cv::Scalar(255, 0, 0), 10);
-        }
+
+        // draw result onto the detect map.
+        draw_lines(detect_map, lines, m_thickness, cv::Scalar(255, 255, 255));
+        draw_keypoints(detect_map, kps, m_thickness, cv::Scalar(255, 0, 0));
+
 
         // test if the result is reasonable.
         unsigned n = m_grids*m_grids*3 + m_grids*3 + 1;
@@ -573,28 +672,25 @@ e8::checker_calibrator::detect(cv::Mat& detect_map)
         std::vector<principle_region> const& regions = partition(m_planes, lines, kps);
         if (regions.empty())
                 return false;
+        for (unsigned i = 0; i < 3; i ++)
+                m_axes[i] = regions[i].basis[0];
 
         // draw the partition result.
-        cv::Scalar colors[3] = {cv::Scalar(0, 0, 255), cv::Scalar(0, 255, 0), cv::Scalar(255, 0, 0)};
-        unsigned shift_scale = static_cast<unsigned>((scale[0] + scale[1])/2 * 0.02f);
-        cv::Vec2i shift[3] = {cv::Vec2i(0, shift_scale), cv::Vec2i(shift_scale, 0), cv::Vec2i(-shift_scale, 0)};
-
-        for (unsigned j = 0; j < 3; j ++) {
-                // draw axis.
-                principle_region const& region = regions[j];
-                cv::Vec4i const& axis = region.basis[0];
-                cv::line(detect_map, cv::Point(axis[0], axis[1]), cv::Point(axis[2], axis[3]), colors[j], thickness);
-
-                // draw key point order.
-                for (unsigned i = 0; i < region.kps.size(); i ++) {
-                        keypoint const& kp = kps[region.kps[i]];
-                        cv::putText(detect_map, std::to_string(i), kp.kp + shift[j], cv::FONT_HERSHEY_COMPLEX_SMALL, 1.5, colors[j], 2, CV_AA);
-                }
-        }
+        draw_principle_region(detect_map, m_axes, m_planes, m_thickness);
         return true;
 }
 
 bool
 e8::checker_calibrator::calibrate(camera& cam, cv::Mat& project_map) const
 {
+        project_map = cv::Mat3i::zeros(m_checker.size());
+        draw_principle_region(project_map, m_axes, m_planes, m_thickness);
+
+        cv::Scalar colors[3] = {cv::Scalar(0, 0, 255), cv::Scalar(0, 255, 0), cv::Scalar(255, 0, 0)};
+        std::vector<cv::Vec2f> pts[3];
+        for (unsigned i = 0; i < 3; i ++) {
+                pts[i] = correspondences(m_planes[i], 9);
+                draw_points(project_map, pts[i], m_thickness, colors[i]);
+        }
+        return true;
 }
