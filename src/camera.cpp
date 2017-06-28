@@ -7,8 +7,8 @@ e8::camera::camera():
 {
 }
 
-e8::camera::camera(float f, cv::Vec3f const& t, cv::Matx33f const& rot):
-        m_f(f), m_t(t), m_r(rot), m_inv_r(rot.t())
+e8::camera::camera(float f, cv::Vec2f const& c, cv::Vec3f const& t, cv::Matx33f const& rot):
+        m_f(f), m_c(c), m_t(t), m_r(rot), m_inv_r(rot.t())
 {
 }
 
@@ -16,6 +16,12 @@ float
 e8::camera::f() const
 {
         return m_f;
+}
+
+cv::Vec2f
+e8::camera::c() const
+{
+        return m_c;
 }
 
 cv::Vec3f
@@ -28,6 +34,12 @@ cv::Matx33f
 e8::camera::r() const
 {
         return m_r;
+}
+
+cv::Matx33f
+e8::camera::inv_r() const
+{
+        return m_inv_r;
 }
 
 std::vector<cv::Vec2f>

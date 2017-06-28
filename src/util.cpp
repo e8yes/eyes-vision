@@ -9,6 +9,16 @@ e8util::im2float(cv::Mat const& I)
         return J;
 }
 
+cv::Mat1f
+e8util::im2grayfloat(cv::Mat const& I)
+{
+        cv::Mat1f J(I.size());
+        cv::Mat1b gray;
+        cv::cvtColor(I, gray, CV_BGR2GRAY);
+        gray.convertTo(J, CV_32F, 1/255.0f);
+        return J;
+}
+
 cv::Mat
 e8util::float2im(cv::Mat3f const& I)
 {

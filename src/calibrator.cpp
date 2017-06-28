@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include <opencv2/imgproc.hpp>
+#include <lmmin.h>
 #include "util.h"
 #include "calibrator.h"
 
@@ -336,55 +337,63 @@ partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines,
 }
 
 static cv::Matx33f
-projective_transform(std::vector<cv::Vec2i> const& kps)
+homography(std::vector<cv::Vec2i> const& kps, bool is_algebraic = false)
 {
         unsigned dimension = static_cast<unsigned>(std::sqrt(kps.size()));
 
-        cv::Mat1f a = cv::Mat1f::zeros(3*kps.size(), 9);
-        cv::Mat1f b = cv::Mat1f::zeros(3*kps.size(), 1);
-        for (unsigned j = 0; j < kps.size(); j ++) {
-                unsigned px = j % dimension;
-                unsigned py = j / dimension;
+        if (is_algebraic) {
+                cv::Mat1f a = cv::Mat1f::zeros(2*kps.size(), 9);
+                for (unsigned j = 0; j < kps.size(); j ++) {
+                        unsigned px = j % dimension;
+                        unsigned py = j / dimension;
 
-                unsigned mj = j*3;
-                // Px(k)        Py(k)   1       0       0       0       0       0       0
-                // 0            0       0       Px(k)   Py(k)   1       0       0       0
-                // 0            0       0       0       0       0       Px(k)   Py(k)   1
-                a.at<float>(mj + 0, 0) = px;
-                a.at<float>(mj + 0, 1) = py;
-                a.at<float>(mj + 0, 2) = 1;
+                        unsigned mj = j*2;
+                        // Px(k)        Py(k)   1       0       0       0       -x*Px(k)        -y*Px(k)
+                        // 0            0       0       Px(k)   Py(k)   1       -x*Py(k)        -y*Py(k)
+                        a.at<float>(mj + 0, 0) = px;
+                        a.at<float>(mj + 0, 1) = py;
+                        a.at<float>(mj + 0, 2) = 1;
+                        a.at<float>(mj + 0, 6) = -px*kps[j][0];
+                        a.at<float>(mj + 0, 7) = -py*kps[j][0];
+                        a.at<float>(mj + 0, 8) = -kps[j][0];
 
-                a.at<float>(mj + 1, 3) = px;
-                a.at<float>(mj + 1, 4) = py;
-                a.at<float>(mj + 1, 5) = 1;
-
-                a.at<float>(mj + 2, 6) = px;
-                a.at<float>(mj + 2, 7) = py;
-                a.at<float>(mj + 2, 8) = 1;
-
-                // Qx(k);       Qy(k);  1;      ...
-                b.at<float>(mj + 0, 0) = kps[j][0];
-                b.at<float>(mj + 1, 0) = kps[j][1];
-                b.at<float>(mj + 2, 0) = 1;
-        }
-
-        cv::Mat1f x(9, 1);
-        cv::solve(a, b, x, cv::DECOMP_SVD);
-
-        // load the least square solution to h.
-        cv::Matx33f h;
-        for (unsigned j = 0; j < 3; j ++) {
-                for (unsigned i = 0; i < 3; i ++) {
-                        h(j, i) = x.at<float>(i + j*3, 0);
+                        a.at<float>(mj + 1, 3) = px;
+                        a.at<float>(mj + 1, 4) = py;
+                        a.at<float>(mj + 1, 5) = 1;
+                        a.at<float>(mj + 1, 6) = -px*kps[j][1];
+                        a.at<float>(mj + 1, 7) = -py*kps[j][1];
+                        a.at<float>(mj + 1, 8) = -kps[j][1];
                 }
+
+                cv::Mat1f w, u, vt;
+                cv::SVDecomp(a, w, u, vt);
+
+                // load the least square solution into h.
+                cv::Matx33f h;
+                for (unsigned j = 0; j < 3; j ++) {
+                        for (unsigned i = 0; i < 3; i ++) {
+                                h(j, i) = vt.at<float>(8, i + j*3);
+                        }
+                }
+
+                return h;
+        } else {
+                std::vector<cv::Vec2i> src;
+                for (unsigned j = 0; j < kps.size(); j ++) {
+                        unsigned px = j % dimension;
+                        unsigned py = j / dimension;
+                        src.push_back(cv::Vec2i(px, py));
+                }
+
+                // load the least square solution to h.
+                return cv::findHomography(src, kps, cv::noArray());
         }
-        return h;
 }
 
 static std::vector<cv::Vec2f>
 correspondences(std::vector<cv::Vec2i> const& kps, unsigned dimension)
 {
-        cv::Matx33f const& h = projective_transform(kps);
+        cv::Matx33f const& h = homography(kps);
 
         std::vector<cv::Vec2f> pts(dimension*dimension);
         for (unsigned j = 0; j < dimension; j ++) {
@@ -680,17 +689,41 @@ e8::checker_calibrator::detect(cv::Mat& detect_map)
         return true;
 }
 
+struct cam_params
+{
+        float f;
+
+        float thx;
+        float thz;
+
+        float tx;
+        float ty;
+        float tz;
+};
+
+static void
+reprojection_error(double const *p, int n, void const *data, double const *f, int *info)
+{
+}
+
+static void
+optimize_camera(std::vector<cv::Vec2i> const* planes)
+{
+}
+
 bool
 e8::checker_calibrator::calibrate(camera& cam, cv::Mat& project_map) const
 {
         project_map = cv::Mat3i::zeros(m_checker.size());
         draw_principle_region(project_map, m_axes, m_planes, m_thickness);
 
+        // extract correspondences from plane keypoints.
         cv::Scalar colors[3] = {cv::Scalar(0, 0, 255), cv::Scalar(0, 255, 0), cv::Scalar(255, 0, 0)};
         std::vector<cv::Vec2f> pts[3];
         for (unsigned i = 0; i < 3; i ++) {
                 pts[i] = correspondences(m_planes[i], 9);
                 draw_points(project_map, pts[i], m_thickness, colors[i]);
         }
+
         return true;
 }
