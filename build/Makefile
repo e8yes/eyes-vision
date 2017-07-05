@@ -447,11 +447,13 @@ objectextractor.o: ../src/objectextractor.cpp ../src/util.h \
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objectextractor.o ../src/objectextractor.cpp
 
 calibrator.o: ../src/calibrator.cpp ../src/util.h \
+		../src/geometry.h \
 		../src/calibrator.h \
 		../src/camera.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o calibrator.o ../src/calibrator.cpp
 
-camera.o: ../src/camera.cpp ../src/camera.h
+camera.o: ../src/camera.cpp ../src/camera.h \
+		../src/geometry.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o camera.o ../src/camera.cpp
 
 stereo.o: ../src/stereo.cpp ../src/stereo.h
@@ -467,6 +469,7 @@ util.o: ../src/util.cpp ../src/util.h
 
 testcalibrator.o: ../test/testcalibrator.cpp ../src/calibrator.h \
 		../src/camera.h \
+		../src/geometry.h \
 		../test/testcalibrator.h \
 		../test/test.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testcalibrator.o ../test/testcalibrator.cpp

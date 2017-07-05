@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include <vector>
+#include <random>
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
@@ -27,6 +28,30 @@ struct island
 };
 
 std::vector<island>     islands(cv::Mat1b const& bw, cv::Mat1b& id_map, unsigned target = 0xFF);
+
+class rng
+{
+public:
+        rng(unsigned int seed):
+                engine(seed), ur(0,1)
+        {
+        }
+
+        rng():
+                ur(0,1)
+        {
+                std::random_device rd;
+                engine.seed(rd());
+        }
+
+        float draw()
+        {
+                return ur(engine);
+        }
+private:
+        std::mt19937                            engine;
+        std::uniform_real_distribution<float>   ur;
+};
 
 }
 

@@ -7,16 +7,20 @@
 namespace e8
 {
 
-struct img_corr
+template<class T>
+struct corr
 {
-        img_corr(cv::Vec2i const& a, cv::Vec2i const& b):
+        corr(T const& a, T const& b):
                 a(a), b(b)
         {
         }
 
-        cv::Vec2i       a;
-        cv::Vec2i       b;
+        T       a;
+        T       b;
 };
+
+typedef corr<cv::Vec2i>         img_corr;
+typedef corr<cv::Vec3f>         point_corr;
 
 struct vertex
 {
@@ -37,8 +41,10 @@ struct mesh
         std::vector<unsigned>   is;
 };
 
-void    point_cloud_write(std::string const& path, point_cloud const& ps);
-void    mesh_write(std::string const& path, mesh const& m);
+void            point_cloud_write(std::string const& path, point_cloud const& ps);
+void            mesh_write(std::string const& path, mesh const& m);
+
+cv::Matx33f     rotation_xyz_transform(float x, float y, float z);
 
 }
 

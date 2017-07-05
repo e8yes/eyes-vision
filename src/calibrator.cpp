@@ -1,8 +1,9 @@
 #include <iostream>
 #include <algorithm>
-#include <opencv2/imgproc.hpp>
 #include <lmmin.h>
+#include <opencv2/imgproc.hpp>
 #include "util.h"
+#include "geometry.h"
 #include "calibrator.h"
 
 
@@ -339,13 +340,13 @@ partition(std::vector<cv::Vec2i> planes[3], std::vector<cv::Vec4i> const& lines,
 static cv::Matx33f
 homography(std::vector<cv::Vec2i> const& kps, bool is_algebraic = false)
 {
-        unsigned dimension = static_cast<unsigned>(std::sqrt(kps.size()));
+        unsigned plane_size = static_cast<unsigned>(std::sqrt(kps.size()));
 
         if (is_algebraic) {
                 cv::Mat1f a = cv::Mat1f::zeros(2*kps.size(), 9);
                 for (unsigned j = 0; j < kps.size(); j ++) {
-                        unsigned px = j % dimension;
-                        unsigned py = j / dimension;
+                        unsigned px = j % plane_size;
+                        unsigned py = j / plane_size;
 
                         unsigned mj = j*2;
                         // Px(k)        Py(k)   1       0       0       0       -x*Px(k)        -y*Px(k)
@@ -380,8 +381,8 @@ homography(std::vector<cv::Vec2i> const& kps, bool is_algebraic = false)
         } else {
                 std::vector<cv::Vec2i> src;
                 for (unsigned j = 0; j < kps.size(); j ++) {
-                        unsigned px = j % dimension;
-                        unsigned py = j / dimension;
+                        unsigned px = j % plane_size;
+                        unsigned py = j / plane_size;
                         src.push_back(cv::Vec2i(px, py));
                 }
 
@@ -390,23 +391,38 @@ homography(std::vector<cv::Vec2i> const& kps, bool is_algebraic = false)
         }
 }
 
-static std::vector<cv::Vec2f>
-correspondences(std::vector<cv::Vec2i> const& kps, unsigned dimension)
+static std::vector<e8::point_corr>
+correspondences(std::vector<cv::Vec2i> const& kps, unsigned num_points, float grid_width, unsigned dimension)
 {
         cv::Matx33f const& h = homography(kps);
 
-        std::vector<cv::Vec2f> pts(dimension*dimension);
-        for (unsigned j = 0; j < dimension; j ++) {
+        std::vector<e8::point_corr> corrs;
+        for (unsigned j = 0; j < num_points; j ++) {
                 unsigned size = static_cast<unsigned>(std::sqrt(kps.size()));
 
-                for (unsigned i = 0; i < dimension; i ++) {
-                        float const y = (size - 1)*static_cast<float>(j)/(dimension - 1);
-                        float const x = (size - 1)*static_cast<float>(i)/(dimension - 1);
-                        cv::Vec3f const& c = h*cv::Vec3f(x, y, 1.0f);
-                        pts[i + j*dimension] = cv::Vec2f(c[0]/c[2], c[1]/c[2]);
+                for (unsigned i = 0; i < num_points; i ++) {
+                        float const sy = static_cast<float>(j)/(num_points - 1);
+                        float const sx = static_cast<float>(i)/(num_points - 1);
+
+                        float const py = (size - 1)*sy;
+                        float const px = (size - 1)*sx;
+
+                        float const ry = sy*grid_width;
+                        float const rx = sx*grid_width;
+
+                        // projected screen points.
+                        cv::Vec3f const& c = h*cv::Vec3f(px, py, 1.0f);
+
+                        // real point.
+                        cv::Vec3f rp;
+                        rp[dimension] = rx;
+                        rp[(dimension + 1)%3] = ry;
+                        rp[(dimension + 2)%3] = 0.0f;
+
+                        corrs.push_back(e8::point_corr(cv::Vec3f(c[0]/c[2], c[1]/c[2], 1.0f), rp));
                 }
         }
-        return pts;
+        return corrs;
 }
 
 static std::vector<cv::Vec4i>
@@ -689,26 +705,111 @@ e8::checker_calibrator::detect(cv::Mat& detect_map)
         return true;
 }
 
-struct cam_params
+// cam_params(f, thx, thz, tx, ty, tz).
+struct param_vec
 {
-        float f;
+        union {
+                struct {
+                        double  f;
+                        double  thx;
+                        double  thz;
+                        double  tx;
+                        double  ty;
+                        double  tz;
+                };
 
-        float thx;
-        float thz;
+                double  params[6];
+        };
 
-        float tx;
-        float ty;
-        float tz;
+        param_vec()
+        {
+                for (unsigned i = 0; i < 6; i ++)
+                        params[i] = 0;
+        }
+};
+
+static std::ostream&
+operator<< (std::ostream& os, param_vec const& vec)
+{
+        os << "param_vec=["
+           << vec.f << ","
+           << vec.thx/M_PI*180 << "," << vec.thz/M_PI*180 << ","
+           << vec.tx << "," << vec.ty << "," << vec.tz << "]";
+        return os;
+}
+
+struct fitting_data
+{
+        fitting_data(std::vector<e8::point_corr> const& corrs,
+                     cv::Vec2i const& center):
+                corrs(corrs), center(center)
+        {
+        }
+
+        std::vector<e8::point_corr> const&      corrs;
+        cv::Vec2i                               center;
 };
 
 static void
-reprojection_error(double const *p, int n, void const *data, double const *f, int *info)
+reprojection_error(double const* p, int, void const* data, double* f, int*)
 {
+        param_vec const* vec = (param_vec const*) p;
+        fitting_data const* fdata = (fitting_data const*) data;
+
+        e8::camera cam(vec->f, fdata->center,
+                       cv::Vec3f(vec->tx, vec->ty, vec->tz),
+                       e8::rotation_xyz_transform(vec->thx, 0.0f, vec->thz));
+
+        cam.proj_sqerr(f, fdata->corrs);
 }
 
-static void
-optimize_camera(std::vector<cv::Vec2i> const* planes)
+static e8::camera
+fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, float grid_size)
 {
+        // fitting data.
+        fitting_data data(corrs, center);
+
+        // find the best-fit parameterization.
+        param_vec       best_vec;
+        double          e[corrs.size()];
+        double          min_error = INFINITY;
+        unsigned const  max_iters = 40000;
+        e8util::rng     rng;
+
+        for (unsigned i = 0; i < max_iters; i ++) {
+                // initial values.
+                param_vec vec;
+                vec.f = rng.draw()*(5000 - 100) + 100;
+                vec.thx = rng.draw()*M_PI/2;
+                vec.thz = -rng.draw()*M_PI/2;
+                vec.tx = rng.draw()*(5*grid_size - grid_size) + grid_size;
+                vec.ty = rng.draw()*(5*grid_size - grid_size) + grid_size;
+                vec.tz = rng.draw()*(5*grid_size - grid_size) + grid_size;
+
+                // fit parameters.
+                lm_control_struct control = lm_control_double;
+                lm_status_struct  status;
+                lmmin(6, vec.params, corrs.size(), static_cast<void*>(&data), reprojection_error, &control, &status);
+
+                // compare the reprojection error with the previously best guess.
+                reprojection_error(vec.params, 6, static_cast<void*>(&data), e, nullptr);
+
+                double se = 0.0f;
+                for (unsigned i = 0; i < corrs.size(); i ++)
+                        se += e[i];
+
+                if (se < min_error) {
+                        std::cout << i <<  "th trial has the best error: " << se/corrs.size() << std::endl;
+                        std::cout << i << "th parameterization: " << vec << std::endl << std::endl;
+                        min_error = se;
+                        best_vec = vec;
+                }
+        }
+
+        // load the optimized results to the camera.
+        return e8::camera(best_vec.f, center,
+                          cv::Vec3f(best_vec.tx, best_vec.ty, best_vec.tz),
+                          e8::rotation_xyz_transform(best_vec.thx, 0.0f, best_vec.thz));
 }
 
 bool
@@ -719,11 +820,27 @@ e8::checker_calibrator::calibrate(camera& cam, cv::Mat& project_map) const
 
         // extract correspondences from plane keypoints.
         cv::Scalar colors[3] = {cv::Scalar(0, 0, 255), cv::Scalar(0, 255, 0), cv::Scalar(255, 0, 0)};
-        std::vector<cv::Vec2f> pts[3];
+
+        std::vector<point_corr> corrs;
+        std::vector<cv::Vec3f> pts_3d;
         for (unsigned i = 0; i < 3; i ++) {
-                pts[i] = correspondences(m_planes[i], 9);
-                draw_points(project_map, pts[i], m_thickness, colors[i]);
+                std::vector<point_corr> const& plane_corrs = correspondences(m_planes[i], 10, m_width, i);
+
+                // Aggregate the correspondences and visualize them.
+                std::vector<cv::Vec2f> pts_2d(plane_corrs.size());
+                for (unsigned j = 0; j < plane_corrs.size(); j ++) {
+                        pts_2d[j] = cv::Vec2f(plane_corrs[j].a[0], plane_corrs[j].a[1]);
+                        pts_3d.push_back(plane_corrs[j].b);
+                        corrs.push_back(plane_corrs[j]);
+                }
+                draw_points(project_map, pts_2d, m_thickness, colors[i]);
         }
 
+        // fit camera parameters from correspondences.
+        cam = fit_camera(corrs, cv::Vec2f(m_checker.cols/2, m_checker.rows/2), m_width);
+
+        // plot the estimated projection using the fitted camera.
+        std::vector<cv::Vec2f> const& projs = cam.proj(pts_3d);
+        draw_points(project_map, projs, m_thickness, cv::Scalar(0, 255, 255));
         return true;
 }

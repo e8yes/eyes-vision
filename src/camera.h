@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <opencv2/core.hpp>
+#include "geometry.h"
 
 namespace e8
 {
@@ -19,6 +20,7 @@ public:
         cv::Matx33f             r() const;
         cv::Matx33f             inv_r() const;
         std::vector<cv::Vec2f>  proj(std::vector<cv::Vec3f> const& pts) const;
+        void                    proj_sqerr(double* error, std::vector<e8::point_corr> const& corrs) const;
 private:
         cv::Matx33f     m_inv_r;
         float           m_f;

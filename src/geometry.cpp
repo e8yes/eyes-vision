@@ -1,3 +1,4 @@
+#include <cmath>
 #include <fstream>
 #include "geometry.h"
 
@@ -27,4 +28,21 @@ e8::point_cloud_write(std::string const& path, point_cloud const& ps)
 void
 e8::mesh_write(std::string const& path, mesh const& m)
 {
+}
+
+
+cv::Matx33f
+e8::rotation_xyz_transform(float x, float y, float z)
+{
+        cv::Matx33f rx(1, 0,            0,
+                       0, std::cos(x),  -std::sin(x),
+                       0, std::sin(x),  std::cos(x));
+        cv::Matx33f ry(std::cos(y),     0, std::sin(y),
+                       0,               1, 0,
+                       -std::sin(y),    0, std::cos(y));
+        cv::Matx33f rz(std::cos(z),     -std::sin(z),   0,
+                       std::sin(z),     std::cos(z),    0,
+                       0,               0,              1);
+
+        return rz*ry*rx;
 }
