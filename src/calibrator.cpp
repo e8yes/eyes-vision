@@ -726,6 +726,34 @@ struct param_vec
                 for (unsigned i = 0; i < 6; i ++)
                         params[i] = 0;
         }
+
+        param_vec(double mu)
+        {
+                for (unsigned i = 0; i < 6; i ++)
+                        params[i] = mu;
+        }
+
+        param_vec(param_vec const& rhs)
+        {
+                for (unsigned i = 0; i < 6; i ++)
+                        params[i] = rhs.params[i];
+        }
+
+        param_vec(float f, float thx, float thz, float tx, float ty, float tz):
+                f(f), thx(thx), thz(thz), tx(tx), ty(ty), tz(tz)
+        {
+        }
+
+
+        param_vec
+        transform(param_vec const& min, param_vec const& max) const
+        {
+                param_vec tvec;
+                for (unsigned i = 0; i < 6; i ++) {
+                        tvec.params[i] = min.params[i] + (std::sin(params[i]) + 1)*(0.5f*(max.params[i] - min.params[i]));
+                }
+                return tvec;
+        }
 };
 
 static std::ostream&
@@ -741,24 +769,28 @@ operator<< (std::ostream& os, param_vec const& vec)
 struct fitting_data
 {
         fitting_data(std::vector<e8::point_corr> const& corrs,
-                     cv::Vec2i const& center):
-                corrs(corrs), center(center)
+                     cv::Vec2i const& center,
+                     param_vec min, param_vec max):
+                corrs(corrs), center(center),
+                min(min), max(max)
         {
         }
 
         std::vector<e8::point_corr> const&      corrs;
         cv::Vec2i                               center;
+        param_vec                               min;
+        param_vec                               max;
 };
 
 static void
 reprojection_error(double const* p, int, void const* data, double* f, int*)
 {
-        param_vec const* vec = (param_vec const*) p;
         fitting_data const* fdata = (fitting_data const*) data;
+        param_vec const& vec = ((param_vec const*) p)->transform(fdata->min, fdata->max);
 
-        e8::camera cam(vec->f, fdata->center,
-                       cv::Vec3f(vec->tx, vec->ty, vec->tz),
-                       e8::rotation_xyz_transform(vec->thx, 0.0f, vec->thz));
+        e8::camera cam(vec.f, fdata->center,
+                       cv::Vec3f(vec.tx, vec.ty, vec.tz),
+                       e8::rotation_xyz_transform(vec.thx, 0.0f, vec.thz));
 
         cam.proj_sqerr(f, fdata->corrs);
 }
@@ -767,24 +799,45 @@ static e8::camera
 fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, float grid_size)
 {
         // fitting data.
-        fitting_data data(corrs, center);
+        param_vec min, max;
+        min.f = 1000.0f;
+        min.thx = 0.0f;
+        min.thz = M_PI/2;
+        min.tx = grid_size;
+        min.ty = 0.2f*grid_size;
+        min.tz = grid_size;
+
+        max.f = 6000.0f;
+        max.thx = M_PI/2;
+        max.thz = M_PI;
+        max.tx = 10.0f*grid_size;
+        max.ty = 3.0f*grid_size;
+        max.tz = 10.0f*grid_size;
+
+        fitting_data data(corrs, center, min, max);
 
         // find the best-fit parameterization.
         param_vec       best_vec;
         double          e[corrs.size()];
         double          min_error = INFINITY;
-        unsigned const  max_iters = 40000;
-        e8util::rng     rng;
+        unsigned const  max_iters = 10000;
+        e8util::rng     rng(1132);
+        param_vec       vec(M_PI);
 
-        for (unsigned i = 0; i < max_iters; i ++) {
+
+        for (unsigned i = 1; i <= max_iters; i ++) {
+                // temperature schedule.
+                float const alpha = 1.5f;
+                float t = static_cast<float>(i)/max_iters;
+                float sigma = M_PI*std::exp(-alpha*t*t);
+
                 // initial values.
-                param_vec vec;
-                vec.f = rng.draw()*(5000 - 100) + 100;
-                vec.thx = rng.draw()*M_PI/2;
-                vec.thz = -rng.draw()*M_PI/2;
-                vec.tx = rng.draw()*(5*grid_size - grid_size) + grid_size;
-                vec.ty = rng.draw()*(5*grid_size - grid_size) + grid_size;
-                vec.tz = rng.draw()*(5*grid_size - grid_size) + grid_size;
+                vec.f = rng.draw_normal(vec.f, sigma);
+                vec.thx = rng.draw_normal(vec.thx, sigma);
+                vec.thz = rng.draw_normal(vec.thz, sigma);
+                vec.tx = rng.draw_normal(vec.tx, sigma);
+                vec.ty = rng.draw_normal(vec.ty, sigma);
+                vec.tz = rng.draw_normal(vec.tz, sigma);
 
                 // fit parameters.
                 lm_control_struct control = lm_control_double;
@@ -793,13 +846,15 @@ fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, fl
 
                 // compare the reprojection error with the previously best guess.
                 reprojection_error(vec.params, 6, static_cast<void*>(&data), e, nullptr);
+                vec = vec.transform(min, max);
 
                 double se = 0.0f;
                 for (unsigned i = 0; i < corrs.size(); i ++)
                         se += e[i];
 
                 if (se < min_error) {
-                        std::cout << i <<  "th trial has the best error: " << se/corrs.size() << std::endl;
+                        std::cout << i << "th sigma " << sigma << std::endl;
+                        std::cout << i <<  "th trial has the best error: " << std::sqrt(se/corrs.size()) << std::endl;
                         std::cout << i << "th parameterization: " << vec << std::endl << std::endl;
                         min_error = se;
                         best_vec = vec;
@@ -824,7 +879,7 @@ e8::checker_calibrator::calibrate(camera& cam, cv::Mat& project_map) const
         std::vector<point_corr> corrs;
         std::vector<cv::Vec3f> pts_3d;
         for (unsigned i = 0; i < 3; i ++) {
-                std::vector<point_corr> const& plane_corrs = correspondences(m_planes[i], 10, m_width, i);
+                std::vector<point_corr> const& plane_corrs = correspondences(m_planes[i], 9, m_width, i);
 
                 // Aggregate the correspondences and visualize them.
                 std::vector<cv::Vec2f> pts_2d(plane_corrs.size());

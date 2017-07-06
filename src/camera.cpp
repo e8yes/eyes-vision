@@ -47,7 +47,8 @@ static cv::Vec2f
 proj(cv::Vec3f const& p, cv::Vec2f const& c, cv::Matx33f const& inv_r, cv::Vec3f const& t, float f)
 {
         cv::Vec3f const& proj_p = inv_r*(p - t);
-        return -f*cv::Vec2f(proj_p[0]/proj_p[2], proj_p[1]/proj_p[2]) + c;
+        cv::Vec2f const& scaled_p = -f*cv::Vec2f(proj_p[0]/proj_p[2], proj_p[1]/proj_p[2]) + c;
+        return cv::Vec2f(scaled_p[0], 2*c[1] - scaled_p[1]);
 }
 
 std::vector<cv::Vec2f>
