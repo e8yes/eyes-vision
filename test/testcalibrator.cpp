@@ -16,15 +16,9 @@ test::test_calibrator::~test_calibrator()
 void
 test::test_calibrator::run() const
 {
-        cv::Mat1b checker = cv::imread("res/checker/checker3.png", cv::IMREAD_GRAYSCALE);
+        cv::Mat1b checker = cv::imread("res/checker/calib_masked.jpg", cv::IMREAD_GRAYSCALE);
 
-        float const f = 1000.0f;
-        cv::Vec3f t(0, 0, 0);
-        cv::Vec2f c(checker.size().width/2, checker.size().height/2);
-        cv::Matx33f r(1, 0, 0, 0, 1, 0, 0, 0, 1);
-
-        e8::camera init(f, c, t, r);
-        e8::checker_calibrator calib(checker, 25, 2*2, init);
+        e8::checker_calibrator calib(checker, 25, 2*2, 38, 0.73f);
         cv::Mat detect_map;
         if (calib.detect(detect_map)) {
                 cv::imwrite("detect_map.png", detect_map);

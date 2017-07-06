@@ -605,7 +605,7 @@ keypoints(std::vector<cv::Vec4i> const& lines, cv::Vec2i const& pmin, cv::Vec2i 
 }
 
 static cv::Mat1b
-binarize(cv::Mat1b const& image, cv::Vec2i& pmin, cv::Vec2i& pmax)
+binarize(cv::Mat1b const& image, cv::Vec2i& pmin, cv::Vec2i& pmax, float level_split)
 {
         // binarize checker image.
         unsigned char max = 0;
@@ -616,7 +616,7 @@ binarize(cv::Mat1b const& image, cv::Vec2i& pmin, cv::Vec2i& pmax)
         });
 
         cv::Mat1b bw(image.size());
-        unsigned char split = min + (max - min) * 0.25f;
+        unsigned char split = min + (max - min) * level_split;
         image.forEach([&bw, &split](float const& v, int const* p) {
                 bw.at<unsigned char>(p[0], p[1]) = v < split ? 0 : 0xff;
         });
@@ -648,8 +648,8 @@ e8::if_calibrator::~if_calibrator()
 {
 }
 
-e8::checker_calibrator::checker_calibrator(cv::Mat1b const& checker, float width, unsigned num_grids, camera const& init):
-        m_checker(checker), m_width(width), m_grids(std::sqrt(num_grids)), m_init(init)
+e8::checker_calibrator::checker_calibrator(cv::Mat1b const& checker, float width, unsigned num_grids, float z, float level_split):
+        m_checker(checker), m_width(width), m_grids(std::sqrt(num_grids)), m_z(z), m_level_split(level_split)
 {
         if (m_grids < 2)
                 throw std::string("not enough grid points.");
@@ -667,7 +667,7 @@ e8::checker_calibrator::detect(cv::Mat& detect_map)
 {
         // preprocess the checker image.
         cv::Vec2i pmin, pmax;
-        cv::Mat1b const& bw = binarize(m_checker, pmin, pmax);
+        cv::Mat1b const& bw = binarize(m_checker, pmin, pmax, m_level_split);
 
         // detect edges.
         cv::Mat1b edges(bw.size());
@@ -796,7 +796,7 @@ reprojection_error(double const* p, int, void const* data, double* f, int*)
 }
 
 static e8::camera
-fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, float grid_size)
+fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, float grid_size, float z)
 {
         // fitting data.
         param_vec min, max;
@@ -805,14 +805,14 @@ fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, fl
         min.thz = M_PI/2;
         min.tx = grid_size;
         min.ty = 0.2f*grid_size;
-        min.tz = grid_size;
+        min.tz = z < 0 ? grid_size : z;
 
         max.f = 6000.0f;
         max.thx = M_PI/2;
         max.thz = M_PI;
         max.tx = 10.0f*grid_size;
         max.ty = 3.0f*grid_size;
-        max.tz = 10.0f*grid_size;
+        max.tz = z < 0 ? 10.0f*grid_size : z;
 
         fitting_data data(corrs, center, min, max);
 
@@ -890,7 +890,7 @@ e8::checker_calibrator::calibrate(camera& cam, cv::Mat& project_map) const
         }
 
         // fit camera parameters from correspondences.
-        cam = fit_camera(corrs, cv::Vec2f(m_checker.cols/2, m_checker.rows/2), m_width);
+        cam = fit_camera(corrs, cv::Vec2f(m_checker.cols/2, m_checker.rows/2), m_width, m_z);
 
         // plot the estimated projection using the fitted camera.
         std::vector<cv::Vec2f> const& projs = cam.proj(pts_3d);

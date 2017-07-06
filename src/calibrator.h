@@ -33,7 +33,7 @@ public:
 class checker_calibrator: public if_calibrator
 {
 public:
-        checker_calibrator(cv::Mat1b const& checker, float width, unsigned num_grids, camera const& init);
+        checker_calibrator(cv::Mat1b const& checker, float width, unsigned num_grids, float z = -1.0f, float level = 0.5f);
         ~checker_calibrator();
 
         bool            detect(cv::Mat& detect_map) override;
@@ -42,7 +42,8 @@ protected:
         cv::Mat1b const&        m_checker;
         float                   m_width;
         unsigned                m_grids;
-        camera const&           m_init;
+        float                   m_z;
+        float                   m_level_split;
 
         float                   m_thickness;
         cv::Vec2i               m_scale;

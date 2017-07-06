@@ -13,8 +13,8 @@ e8::if_object_extractor::~if_object_extractor()
 }
 
 
-e8::fgbg_extractor::fgbg_extractor(cv::Mat3f const& foreground, cv::Mat3f const& background, unsigned num_comps, float threshold):
-        m_fg(foreground), m_bg(background), m_n_comps(num_comps), m_thres(threshold)
+e8::fgbg_extractor::fgbg_extractor(cv::Mat3f const& foreground, cv::Mat3f const& background, unsigned num_comps, float threshold, float bg_scale):
+        m_fg(foreground), m_bg(background), m_n_comps(num_comps), m_thres(threshold), m_bg_scale(bg_scale)
 {
 }
 
@@ -26,7 +26,7 @@ cv::Mat1b
 e8::fgbg_extractor::compute_mask() const
 {
         // subtract out the background.
-        cv::Mat3f extracted = cv::abs(m_fg - m_bg);
+        cv::Mat3f extracted = cv::abs(m_fg - m_bg*m_bg_scale);
 
         // mask generation.
         cv::Mat1b mask(extracted.size());
