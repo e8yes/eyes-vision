@@ -822,16 +822,14 @@ fit_camera(std::vector<e8::point_corr> const& corrs, cv::Vec2f const& center, fl
         double          min_error = INFINITY;
         unsigned const  max_iters = 10000;
         e8util::rng     rng(1132);
+
+        // initial mean.
         param_vec       vec(M_PI);
 
-
         for (unsigned i = 1; i <= max_iters; i ++) {
-                // temperature schedule.
-                float const alpha = 1.5f;
-                float t = static_cast<float>(i)/max_iters;
-                float sigma = M_PI*std::exp(-alpha*t*t);
+                float const sigma = M_PI;
 
-                // initial values.
+                // random restart.
                 vec.f = rng.draw_normal(vec.f, sigma);
                 vec.thx = rng.draw_normal(vec.thx, sigma);
                 vec.thz = rng.draw_normal(vec.thz, sigma);
@@ -879,7 +877,7 @@ e8::checker_calibrator::calibrate(camera& cam, cv::Mat& project_map) const
         std::vector<point_corr> corrs;
         std::vector<cv::Vec3f> pts_3d;
         for (unsigned i = 0; i < 3; i ++) {
-                std::vector<point_corr> const& plane_corrs = correspondences(m_planes[i], 9, m_width, i);
+                std::vector<point_corr> const& plane_corrs = correspondences(m_planes[i], 10, m_width, i);
 
                 // Aggregate the correspondences and visualize them.
                 std::vector<cv::Vec2f> pts_2d(plane_corrs.size());
