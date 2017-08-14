@@ -1,39 +1,11 @@
-#include <algorithm>
-#include "util.h"
+#include "morphology.h"
 
-cv::Mat3f
-e8util::im2float(cv::Mat const& I)
+
+e8util::island::island(unsigned id):
+        id(id), area(0)
 {
-        cv::Mat3f J(I.size());
-        I.convertTo(J, CV_32FC3, 1/255.0f);
-        return J;
 }
 
-cv::Mat1f
-e8util::im2grayfloat(cv::Mat const& I)
-{
-        cv::Mat1f J(I.size());
-        cv::Mat1b gray;
-        cv::cvtColor(I, gray, CV_BGR2GRAY);
-        gray.convertTo(J, CV_32F, 1/255.0f);
-        return J;
-}
-
-cv::Mat
-e8util::float2im(cv::Mat3f const& I)
-{
-        cv::Mat J;
-        I.convertTo(J, CV_8UC3, 255.0f);
-        return J;
-}
-
-void
-e8util::imshow(cv::Mat const& I, std::string const& name)
-{
-        cv::namedWindow(name, cv::WINDOW_NORMAL);
-        cv::imshow(name, I);
-        cv::waitKey(0);
-}
 
 static void
 islands_connected_components(e8util::island& island, cv::Mat1b const& bw, cv::Mat1b& id_map, unsigned target,  unsigned i, unsigned j)

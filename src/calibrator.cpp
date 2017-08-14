@@ -1,8 +1,9 @@
 #include <iostream>
 #include <algorithm>
 #include <lmmin.h>
+#include <opencv2/opencv.hpp>
 #include <opencv2/imgproc.hpp>
-#include "util.h"
+#include "distribution.h"
 #include "geometry.h"
 #include "calibrator.h"
 

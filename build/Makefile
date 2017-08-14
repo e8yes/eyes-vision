@@ -56,15 +56,20 @@ SOURCES       = ../src/main.cpp \
 		../src/calibrator.cpp \
 		../src/camera.cpp \
 		../src/stereo.cpp \
-		../test/testextractor.cpp \
-		../src/util.cpp \
 		../test/testcalibrator.cpp \
 		../src/scanner.cpp \
 		../src/meshbuilder.cpp \
 		../src/geometry.cpp \
 		../test/testscanner.cpp \
 		../src/neuralnet.cpp \
-		../src/featureextractor.cpp moc_mainwindow.cpp
+		../src/featureextractor.cpp \
+		../test/testcnnfeature.cpp \
+		../test/testfgbgextractor.cpp \
+		../test/testgenericextractor.cpp \
+		../src/morphology.cpp \
+		../src/imagesamples.cpp \
+		../src/distribution.cpp \
+		../src/image.cpp moc_mainwindow.cpp
 OBJECTS       = main.o \
 		mainwindow.o \
 		test.o \
@@ -73,8 +78,6 @@ OBJECTS       = main.o \
 		calibrator.o \
 		camera.o \
 		stereo.o \
-		testextractor.o \
-		util.o \
 		testcalibrator.o \
 		scanner.o \
 		meshbuilder.o \
@@ -82,6 +85,13 @@ OBJECTS       = main.o \
 		testscanner.o \
 		neuralnet.o \
 		featureextractor.o \
+		testcnnfeature.o \
+		testfgbgextractor.o \
+		testgenericextractor.o \
+		morphology.o \
+		imagesamples.o \
+		distribution.o \
+		image.o \
 		moc_mainwindow.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
@@ -151,15 +161,20 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../src/calibrator.h \
 		../src/camera.h \
 		../src/stereo.h \
-		../test/testextractor.h \
-		../src/util.h \
 		../test/testcalibrator.h \
 		../src/meshbuilder.h \
 		../src/geometry.h \
 		../src/scanner.h \
 		../test/testscanner.h \
 		../src/neuralnet.h \
-		../src/featureextractor.h ../src/main.cpp \
+		../src/featureextractor.h \
+		../test/testcnnfeature.h \
+		../test/testgenericextractor.h \
+		../test/testfgbgextractor.h \
+		../src/morphology.h \
+		../src/imagesamples.h \
+		../src/distribution.h \
+		../src/image.h ../src/main.cpp \
 		../src/mainwindow.cpp \
 		../test/test.cpp \
 		../test/testrunner.cpp \
@@ -167,15 +182,20 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../src/calibrator.cpp \
 		../src/camera.cpp \
 		../src/stereo.cpp \
-		../test/testextractor.cpp \
-		../src/util.cpp \
 		../test/testcalibrator.cpp \
 		../src/scanner.cpp \
 		../src/meshbuilder.cpp \
 		../src/geometry.cpp \
 		../test/testscanner.cpp \
 		../src/neuralnet.cpp \
-		../src/featureextractor.cpp
+		../src/featureextractor.cpp \
+		../test/testcnnfeature.cpp \
+		../test/testfgbgextractor.cpp \
+		../test/testgenericextractor.cpp \
+		../src/morphology.cpp \
+		../src/imagesamples.cpp \
+		../src/distribution.cpp \
+		../src/image.cpp
 QMAKE_TARGET  = e8yesvision
 DESTDIR       = 
 TARGET        = e8yesvision
@@ -332,8 +352,8 @@ dist: distdir FORCE
 distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
-	$(COPY_FILE) --parents ../src/mainwindow.h ../test/test.h ../test/testrunner.h ../src/objectextractor.h ../src/calibrator.h ../src/camera.h ../src/stereo.h ../test/testextractor.h ../src/util.h ../test/testcalibrator.h ../src/meshbuilder.h ../src/geometry.h ../src/scanner.h ../test/testscanner.h ../src/neuralnet.h ../src/featureextractor.h $(DISTDIR)/
-	$(COPY_FILE) --parents ../src/main.cpp ../src/mainwindow.cpp ../test/test.cpp ../test/testrunner.cpp ../src/objectextractor.cpp ../src/calibrator.cpp ../src/camera.cpp ../src/stereo.cpp ../test/testextractor.cpp ../src/util.cpp ../test/testcalibrator.cpp ../src/scanner.cpp ../src/meshbuilder.cpp ../src/geometry.cpp ../test/testscanner.cpp ../src/neuralnet.cpp ../src/featureextractor.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents ../src/mainwindow.h ../test/test.h ../test/testrunner.h ../src/objectextractor.h ../src/calibrator.h ../src/camera.h ../src/stereo.h ../test/testcalibrator.h ../src/meshbuilder.h ../src/geometry.h ../src/scanner.h ../test/testscanner.h ../src/neuralnet.h ../src/featureextractor.h ../test/testcnnfeature.h ../test/testgenericextractor.h ../test/testfgbgextractor.h ../src/morphology.h ../src/imagesamples.h ../src/distribution.h ../src/image.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../src/main.cpp ../src/mainwindow.cpp ../test/test.cpp ../test/testrunner.cpp ../src/objectextractor.cpp ../src/calibrator.cpp ../src/camera.cpp ../src/stereo.cpp ../test/testcalibrator.cpp ../src/scanner.cpp ../src/meshbuilder.cpp ../src/geometry.cpp ../test/testscanner.cpp ../src/neuralnet.cpp ../src/featureextractor.cpp ../test/testcnnfeature.cpp ../test/testfgbgextractor.cpp ../test/testgenericextractor.cpp ../src/morphology.cpp ../src/imagesamples.cpp ../src/distribution.cpp ../src/image.cpp $(DISTDIR)/
 	$(COPY_FILE) --parents ../src/mainwindow.ui $(DISTDIR)/
 
 
@@ -400,16 +420,20 @@ test.o: ../test/test.cpp ../test/test.h
 
 testrunner.o: ../test/testrunner.cpp ../test/testrunner.h \
 		../test/test.h \
-		../test/testextractor.h \
+		../test/testfgbgextractor.h \
 		../test/testcalibrator.h \
-		../test/testscanner.h
+		../test/testscanner.h \
+		../test/testcnnfeature.h \
+		../test/testgenericextractor.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testrunner.o ../test/testrunner.cpp
 
-objectextractor.o: ../src/objectextractor.cpp ../src/util.h \
-		../src/objectextractor.h
+objectextractor.o: ../src/objectextractor.cpp ../src/image.h \
+		../src/objectextractor.h \
+		../src/geometry.h \
+		../src/featureextractor.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o objectextractor.o ../src/objectextractor.cpp
 
-calibrator.o: ../src/calibrator.cpp ../src/util.h \
+calibrator.o: ../src/calibrator.cpp ../src/image.h \
 		../src/geometry.h \
 		../src/calibrator.h \
 		../src/camera.h
@@ -422,14 +446,6 @@ camera.o: ../src/camera.cpp ../src/camera.h \
 stereo.o: ../src/stereo.cpp ../src/stereo.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o stereo.o ../src/stereo.cpp
 
-testextractor.o: ../test/testextractor.cpp ../src/objectextractor.h \
-		../test/testextractor.h \
-		../test/test.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testextractor.o ../test/testextractor.cpp
-
-util.o: ../src/util.cpp ../src/util.h
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o util.o ../src/util.cpp
-
 testcalibrator.o: ../test/testcalibrator.cpp ../src/calibrator.h \
 		../src/camera.h \
 		../src/geometry.h \
@@ -437,7 +453,7 @@ testcalibrator.o: ../test/testcalibrator.cpp ../src/calibrator.h \
 		../test/test.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testcalibrator.o ../test/testcalibrator.cpp
 
-scanner.o: ../src/scanner.cpp ../src/util.h \
+scanner.o: ../src/scanner.cpp ../src/image.h \
 		../src/scanner.h \
 		../src/camera.h \
 		../src/geometry.h
@@ -460,8 +476,36 @@ testscanner.o: ../test/testscanner.cpp ../src/geometry.h \
 neuralnet.o: ../src/neuralnet.cpp ../src/neuralnet.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o neuralnet.o ../src/neuralnet.cpp
 
-featureextractor.o: ../src/featureextractor.cpp ../src/featureextractor.h
+featureextractor.o: ../src/featureextractor.cpp ../src/neuralnet.h \
+		../src/featureextractor.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o featureextractor.o ../src/featureextractor.cpp
+
+testcnnfeature.o: ../test/testcnnfeature.cpp ../test/testcnnfeature.h \
+		../test/test.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testcnnfeature.o ../test/testcnnfeature.cpp
+
+testfgbgextractor.o: ../test/testfgbgextractor.cpp ../src/objectextractor.h \
+		../src/geometry.h \
+		../src/featureextractor.h \
+		../test/testfgbgextractor.h \
+		../test/test.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testfgbgextractor.o ../test/testfgbgextractor.cpp
+
+testgenericextractor.o: ../test/testgenericextractor.cpp ../test/testgenericextractor.h \
+		../test/test.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o testgenericextractor.o ../test/testgenericextractor.cpp
+
+morphology.o: ../src/morphology.cpp ../src/morphology.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o morphology.o ../src/morphology.cpp
+
+imagesamples.o: ../src/imagesamples.cpp ../src/imagesamples.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o imagesamples.o ../src/imagesamples.cpp
+
+distribution.o: ../src/distribution.cpp ../src/distribution.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o distribution.o ../src/distribution.cpp
+
+image.o: ../src/image.cpp ../src/image.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o image.o ../src/image.cpp
 
 moc_mainwindow.o: moc_mainwindow.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_mainwindow.o moc_mainwindow.cpp

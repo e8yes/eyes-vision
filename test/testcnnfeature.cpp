@@ -1,5 +1,6 @@
 #include "testcnnfeature.h"
 
+
 test::test_cnnfeature::test_cnnfeature()
 {
 }

@@ -1,6 +1,7 @@
 #include <opencv2/imgproc.hpp>
 #include <string>
-#include "util.h"
+#include <unordered_map>
+#include "image.h"
 #include "scanner.h"
 
 
