@@ -3,6 +3,11 @@
 #include "geometry.h"
 
 
+e8::vertex::vertex(cv::Vec3f const& p, cv::Vec3f const& n):
+        p(p), n(n)
+{
+}
+
 void
 e8::point_cloud_write(std::string const& path, point_cloud const& ps)
 {
@@ -45,4 +50,37 @@ e8::rotation_xyz_transform(float x, float y, float z)
                        0,               0,              1);
 
         return rz*ry*rx;
+}
+
+e8::box::box(cv::Vec2f const& min, cv::Vec2f const& max):
+        min(min), max(max)
+{
+}
+
+bool
+e8::box::is_inside(cv::Vec2f const& pt) const
+{
+        return pt[0] >= min[0] && pt[0] <= max[0] &&
+               pt[1] >= min[1] && pt[1] <= max[1];
+}
+
+e8::ellipse::ellipse(float major_axis, float minor_axis, cv::Vec2f const& c, float rot):
+        major_axis(major_axis), minor_axis(minor_axis)
+{
+        cv::Matx33f t = cv::Matx33f(1, 0, c[0],
+                                    0, 1, c[1],
+                                    0, 0, 1);
+        cv::Matx33f inv_t = cv::Matx33f(1, 0, -c[0],
+                                        0, 1, -c[1],
+                                        0, 0, 1);
+        cv::Matx33f r = rotation_xyz_transform(0, 0, rot);
+        t_f = t*r;
+        t_i = r.t()*inv_t;
+}
+
+bool
+e8::ellipse::is_inside(cv::Vec2f const& p) const
+{
+        cv::Vec3f const& lp = t_i*cv::Vec3f(p[0], p[1], 1);
+        return lp[0]*lp[0]/(major_axis*major_axis) + lp[1]*lp[1]/(minor_axis*minor_axis) <= 1;
 }
