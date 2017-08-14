@@ -2,9 +2,11 @@
 #include <cstring>
 #include <iostream>
 #include "testrunner.h"
-#include "testextractor.h"
+#include "testfgbgextractor.h"
 #include "testcalibrator.h"
 #include "testscanner.h"
+#include "testcnnfeature.h"
+#include "testgenericextractor.h"
 
 
 test::test_runner::test_runner()
@@ -59,9 +61,11 @@ test::test_runner
 test::load(int argc, char** argv)
 {
         test_runner runner;
-        runner.add("test_extractor", new test_extractor(), false);
+        runner.add("test_fgbg_extractor", new test_fgbg_extractor(), false);
         runner.add("test_calibrator", new test_calibrator(), false);
         runner.add("test_scanner", new test_scanner(), false);
+        runner.add("test_cnnfeature", new test_cnnfeature(), false);
+        runner.add("test_generic_extractor", new test_generic_extractor(), false);
 
         for (int i = 1; i < argc; i ++) {
                 if ((!std::strcmp(argv[i], "--test") || !std::strcmp(argv[i], "-t")) && (i + 1 < argc)) {

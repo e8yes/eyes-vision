@@ -19,7 +19,6 @@ SOURCES += src/main.cpp\
     src/calibrator.cpp \
     src/camera.cpp \
     src/stereo.cpp \
-    test/testextractor.cpp \
     src/util.cpp \
     test/testcalibrator.cpp \
     src/scanner.cpp \
@@ -27,7 +26,10 @@ SOURCES += src/main.cpp\
     src/geometry.cpp \
     test/testscanner.cpp \
     src/neuralnet.cpp \
-    src/featureextractor.cpp
+    src/featureextractor.cpp \
+    test/testcnnfeature.cpp \
+    test/testfgbgextractor.cpp \
+    test/testgenericextractor.cpp
 
 HEADERS  += src/mainwindow.h \
     test/test.h \
@@ -36,7 +38,6 @@ HEADERS  += src/mainwindow.h \
     src/calibrator.h \
     src/camera.h \
     src/stereo.h \
-    test/testextractor.h \
     src/util.h \
     test/testcalibrator.h \
     src/meshbuilder.h \
@@ -44,7 +45,10 @@ HEADERS  += src/mainwindow.h \
     src/scanner.h \
     test/testscanner.h \
     src/neuralnet.h \
-    src/featureextractor.h
+    src/featureextractor.h \
+    test/testcnnfeature.h \
+    test/testgenericextractor.h \
+    test/testfgbgextractor.h
 
 CONFIG += link_pkgconfig
 PKGCONFIG += opencv

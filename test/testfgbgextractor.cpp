@@ -1,6 +1,6 @@
 #include <opencv2/imgcodecs.hpp>
 #include "src/objectextractor.h"
-#include "testextractor.h"
+#include "testfgbgextractor.h"
 
 
 test::test_fgbg_extractor::test_fgbg_extractor()
