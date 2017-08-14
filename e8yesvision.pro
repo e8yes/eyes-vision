@@ -25,7 +25,9 @@ SOURCES += src/main.cpp\
     src/scanner.cpp \
     src/meshbuilder.cpp \
     src/geometry.cpp \
-    test/testscanner.cpp
+    test/testscanner.cpp \
+    src/neuralnet.cpp \
+    src/featureextractor.cpp
 
 HEADERS  += src/mainwindow.h \
     test/test.h \
@@ -40,7 +42,9 @@ HEADERS  += src/mainwindow.h \
     src/meshbuilder.h \
     src/geometry.h \
     src/scanner.h \
-    test/testscanner.h
+    test/testscanner.h \
+    src/neuralnet.h \
+    src/featureextractor.h
 
 CONFIG += link_pkgconfig
 PKGCONFIG += opencv

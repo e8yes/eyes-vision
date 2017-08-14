@@ -23,8 +23,8 @@ test::test_extractor::run() const
         I0.convertTo(fg, CV_32FC3, 1/255.0f);
         I1.convertTo(bg, CV_32FC3, 1/255.0f);
 
-        e8::fgbg_extractor extractor(fg, bg, 1, 0.1f, 0.1f);
-        cv::Mat1b const& mask = extractor.compute_mask();
+        e8::fgbg_object_extractor extractor(bg, 1, 0.1f, 0.1f);
+        cv::Mat1b const& mask = extractor.compute_mask(fg);
 
         cv::imwrite("mask.png", mask);
 }

@@ -13,20 +13,20 @@ e8::if_object_extractor::~if_object_extractor()
 }
 
 
-e8::fgbg_extractor::fgbg_extractor(cv::Mat3f const& foreground, cv::Mat3f const& background, unsigned num_comps, float threshold, float bg_scale):
-        m_fg(foreground), m_bg(background), m_n_comps(num_comps), m_thres(threshold), m_bg_scale(bg_scale)
+e8::fgbg_object_extractor::fgbg_object_extractor(cv::Mat3f const& background, unsigned num_comps, float threshold, float bg_scale):
+        m_bg(background), m_n_comps(num_comps), m_thres(threshold), m_bg_scale(bg_scale)
 {
 }
 
-e8::fgbg_extractor::~fgbg_extractor()
+e8::fgbg_object_extractor::~fgbg_object_extractor()
 {
 }
 
 cv::Mat1b
-e8::fgbg_extractor::compute_mask() const
+e8::fgbg_object_extractor::compute_mask(cv::Mat3f const& foreground) const
 {
         // subtract out the background.
-        cv::Mat3f extracted = cv::abs(m_fg - m_bg*m_bg_scale);
+        cv::Mat3f extracted = cv::abs(foreground - m_bg*m_bg_scale);
 
         // mask generation.
         cv::Mat1b mask(extracted.size());
@@ -36,7 +36,7 @@ e8::fgbg_extractor::compute_mask() const
         });
 
         // noise removal.
-        unsigned fsize = (m_fg.size().width + m_fg.size().height)/2.0f*0.01f;
+        unsigned fsize = (foreground.size().width + foreground.size().height)/2.0f*0.01f;
         fsize = fsize + 1 - (fsize % 2);
         cv::Mat1b filtered(mask.size());
         cv::medianBlur(mask, filtered, fsize);
@@ -54,4 +54,17 @@ e8::fgbg_extractor::compute_mask() const
                 }
         }
         return suppressed;
+}
+
+e8::generic_object_extractor::generic_object_extractor(cnn_feature_extractor const& fe)
+{
+}
+
+e8::generic_object_extractor::~generic_object_extractor()
+{
+}
+
+cv::Mat1b
+e8::generic_object_extractor::compute_mask(cv::Mat3f const& img) const
+{
 }
