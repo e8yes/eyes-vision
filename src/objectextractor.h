@@ -2,6 +2,7 @@
 #define OBJECT_EXTRACTOR_H
 
 #include <opencv2/core.hpp>
+#include "geometry.h"
 #include "featureextractor.h"
 
 namespace e8
@@ -14,6 +15,8 @@ public:
         virtual ~if_object_extractor();
 
         virtual cv::Mat1b       compute_mask(cv::Mat3f const& img) const = 0;
+        virtual box             compute_box(cv::Mat3f const& img) const = 0;
+        virtual ellipse         compute_ellipse(cv::Mat3f const& img) const = 0;
 };
 
 class fgbg_object_extractor: public if_object_extractor
@@ -23,6 +26,8 @@ public:
                               unsigned num_components = 1, float threshold = 0.05f, float bg_scale = 1.0f);
         ~fgbg_object_extractor() override;
         cv::Mat1b       compute_mask(cv::Mat3f const& foreground) const;
+        box             compute_box(cv::Mat3f const& img) const override;
+        ellipse         compute_ellipse(cv::Mat3f const& img) const override;
 private:
         cv::Mat3f const&        m_bg;
         unsigned                m_n_comps;
@@ -34,8 +39,20 @@ class generic_object_extractor: public if_object_extractor
 {
 public:
         generic_object_extractor(cnn_feature_extractor const& fe);
-        ~generic_object_extractor();
+        ~generic_object_extractor() override;
         cv::Mat1b       compute_mask(cv::Mat3f const& img) const override;
+        box             compute_box(cv::Mat3f const& img) const override;
+        ellipse         compute_ellipse(cv::Mat3f const& img) const override;
+};
+
+class hog_dpm_object_extractor: public if_object_extractor
+{
+public:
+        hog_dpm_object_extractor();
+        ~hog_dpm_object_extractor() override;
+        cv::Mat1b       compute_mask(cv::Mat3f const& img) const override;
+        box             compute_box(cv::Mat3f const& img) const override;
+        ellipse         compute_ellipse(cv::Mat3f const& img) const override;
 };
 
 }

@@ -56,6 +56,17 @@ e8::fgbg_object_extractor::compute_mask(cv::Mat3f const& foreground) const
         return suppressed;
 }
 
+e8::box
+e8::fgbg_object_extractor::compute_box(cv::Mat3f const& img) const
+{
+}
+
+e8::ellipse
+e8::fgbg_object_extractor::compute_ellipse(cv::Mat3f const& img) const
+{
+}
+
+
 e8::generic_object_extractor::generic_object_extractor(cnn_feature_extractor const& fe)
 {
 }
@@ -66,5 +77,39 @@ e8::generic_object_extractor::~generic_object_extractor()
 
 cv::Mat1b
 e8::generic_object_extractor::compute_mask(cv::Mat3f const& img) const
+{
+}
+
+e8::box
+e8::generic_object_extractor::compute_box(cv::Mat3f const& img) const
+{
+}
+
+e8::ellipse
+e8::generic_object_extractor::compute_ellipse(cv::Mat3f const& img) const
+{
+}
+
+
+e8::hog_dpm_object_extractor::hog_dpm_object_extractor()
+{
+}
+
+e8::hog_dpm_object_extractor::~hog_dpm_object_extractor()
+{
+}
+
+cv::Mat1b
+e8::hog_dpm_object_extractor::compute_mask(cv::Mat3f const& img) const
+{
+}
+
+e8::box
+e8::hog_dpm_object_extractor::compute_box(cv::Mat3f const& img) const
+{
+}
+
+e8::ellipse
+e8::hog_dpm_object_extractor::compute_ellipse(cv::Mat3f const& img) const
 {
 }
