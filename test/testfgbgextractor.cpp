@@ -3,17 +3,17 @@
 #include "testextractor.h"
 
 
-test::test_extractor::test_extractor()
+test::test_fgbg_extractor::test_fgbg_extractor()
 {
 }
 
-test::test_extractor::~test_extractor()
+test::test_fgbg_extractor::~test_fgbg_extractor()
 {
 }
 
 
 void
-test::test_extractor::run() const
+test::test_fgbg_extractor::run() const
 {
         cv::Mat I0 = cv::imread("res/fgbg/calib_fg.jpg", cv::IMREAD_COLOR);
         cv::Mat I1 = cv::imread("res/fgbg/calib_bg.jpg", cv::IMREAD_COLOR);
