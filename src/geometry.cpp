@@ -52,8 +52,21 @@ e8::rotation_xyz_transform(float x, float y, float z)
         return rz*ry*rx;
 }
 
+
+e8::if_region::if_region()
+{
+}
+
+e8::if_region::~if_region()
+{
+}
+
 e8::box::box(cv::Vec2f const& min, cv::Vec2f const& max):
         min(min), max(max)
+{
+}
+
+e8::box::~box()
 {
 }
 
@@ -63,6 +76,16 @@ e8::box::is_inside(cv::Vec2f const& pt) const
         return pt[0] >= min[0] && pt[0] <= max[0] &&
                pt[1] >= min[1] && pt[1] <= max[1];
 }
+
+void
+e8::box::scale(float x, float y)
+{
+        cv::Vec2f const& d = (max - min)/2;
+        cv::Vec2f const& c = (min + max)/2;
+        min = c - d.mul(cv::Vec2f(x, y));
+        max = c + d.mul(cv::Vec2f(x, y));
+}
+
 
 e8::ellipse::ellipse(float major_axis, float minor_axis, cv::Vec2f const& c, float rot):
         major_axis(major_axis), minor_axis(minor_axis)
@@ -78,9 +101,20 @@ e8::ellipse::ellipse(float major_axis, float minor_axis, cv::Vec2f const& c, flo
         t_i = r.t()*inv_t;
 }
 
+e8::ellipse::~ellipse()
+{
+}
+
 bool
 e8::ellipse::is_inside(cv::Vec2f const& p) const
 {
         cv::Vec3f const& lp = t_i*cv::Vec3f(p[0], p[1], 1);
         return lp[0]*lp[0]/(major_axis*major_axis) + lp[1]*lp[1]/(minor_axis*minor_axis) <= 1;
+}
+
+void
+e8::ellipse::scale(float x, float y)
+{
+        major_axis *= x;
+        minor_axis *= y;
 }

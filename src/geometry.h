@@ -50,20 +50,35 @@ cv::Matx33f     rotation_xyz_transform(float x, float y, float z);
 
 
 ///////////////////////////////////////////////////////////
-struct box
+class if_region
 {
-        box(cv::Vec2f const& min, cv::Vec2f const& max);
-        bool is_inside(cv::Vec2f const& pt) const;
+public:
+        if_region();
+        virtual ~if_region();
+        virtual bool is_inside(cv::Vec2f const& pt) const = 0;
+        virtual void scale(float x, float y) = 0;
+};
 
+class box: public if_region
+{
+public:
+        box(cv::Vec2f const& min, cv::Vec2f const& max);
+        ~box() override;
+        bool    is_inside(cv::Vec2f const& pt) const override;
+        void    scale(float x, float y) override;
+private:
         cv::Vec2f       min;
         cv::Vec2f       max;
 };
 
-struct ellipse
+class ellipse: public if_region
 {
+public:
         ellipse(float major_axis, float minor_axis, cv::Vec2f const& c, float rot);
-        bool    is_inside(cv::Vec2f const& p) const;
-
+        ~ellipse() override;
+        bool    is_inside(cv::Vec2f const& p) const override;
+        void    scale(float x, float y) override;
+private:
         float           major_axis;
         float           minor_axis;
         cv::Matx33f     t_f;
