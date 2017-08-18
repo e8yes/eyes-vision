@@ -47,9 +47,9 @@ e8util::fddb_samples::fddb_iterator::fddb_iterator::switch_base_path(std::string
 }
 
 void
-e8util::fddb_samples::fddb_iterator::fddb_iterator::override_image(cv::Mat3f const& img)
+e8util::fddb_samples::fddb_iterator::fddb_iterator::save_image(cv::Mat3f const& img)
 {
-        cv::imwrite(m_base_path + "/" + m_img_path, img);
+        cv::imwrite(m_base_path + "/" + m_img_path, img*255.0f);
 }
 
 void
@@ -64,10 +64,12 @@ e8util::fddb_samples::fddb_iterator::scale_regions(float x, float y)
 static void
 parse_fddb_annotations(std::string const& annotations, std::vector<e8util::fddb_samples::fddb_iterator>& iters)
 {
-        std::ifstream file(annotations + "/FDDB-fold-01-ellipseList.txt");
+        std::ifstream file(annotations);
         while (file.good()) {
                 std::string path;
                 file >> path;
+                if (file.eof())
+                        break;
                 unsigned n_annos;
                 file >> n_annos;
                 std::vector<e8::ellipse> ellipses;
@@ -75,15 +77,30 @@ parse_fddb_annotations(std::string const& annotations, std::vector<e8util::fddb_
                         float major_axis, minor_axis, cx, cy, angle, score;
                         file >> major_axis;
                         file >> minor_axis;
+                        file >> angle;
                         file >> cx;
                         file >> cy;
-                        file >> angle;
                         file >> score;
-                        ellipses.push_back(e8::ellipse(major_axis, minor_axis, cv::Vec2f(cx, cy), angle));
+                        ellipses.push_back(e8::ellipse(major_axis, minor_axis, cv::Vec2f(cx, cy), angle/180*M_PI));
                 }
-                e8util::fddb_samples::fddb_iterator it(ellipses, path);
+                e8util::fddb_samples::fddb_iterator it(ellipses, path + ".jpg");
                 iters.push_back(it);
         }
+}
+
+static void
+parse_all_fddb_annotations(std::string const& annotations, std::vector<e8util::fddb_samples::fddb_iterator>& iters)
+{
+        parse_fddb_annotations(annotations + "/FDDB-fold-01-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-02-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-03-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-04-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-05-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-06-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-07-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-08-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-09-ellipseList.txt", iters);
+        parse_fddb_annotations(annotations + "/FDDB-fold-10-ellipseList.txt", iters);
 }
 
 e8util::fddb_samples::fddb_samples(std::string const& annotations, std::string const& imgs, std::string const& normalized)
@@ -91,7 +108,7 @@ e8util::fddb_samples::fddb_samples(std::string const& annotations, std::string c
         unsigned const target_size = 227;
 
         // parse annotated regions.
-        parse_fddb_annotations(annotations, m_iters);
+        parse_all_fddb_annotations(annotations, m_iters);
 
         // warp and find mean.
         cv::Mat3f mean(target_size, target_size);
@@ -112,18 +129,22 @@ e8util::fddb_samples::fddb_samples(std::string const& annotations, std::string c
         // normalize and cache the normalized images.
         for (unsigned i = 0; i < m_iters.size(); i ++) {
                 m_iters[i].switch_base_path(imgs);
-                cv::Mat3f const& img =  m_iters[i].image();
+                cv::Mat3f const& img = m_iters[i].image();
+                cv::Mat3f warped;
+                cv::resize(img, warped, cv::Size(target_size, target_size), 0, 0, cv::INTER_LANCZOS4);
+
                 m_iters[i].switch_base_path(normalized);
-                m_iters[i].override_image(img - mean);
+                m_iters[i].save_image(warped - mean);
         }
 }
 
 e8util::fddb_samples::fddb_samples(std::string const& annotations, std::string const& normalized)
 {
-        parse_fddb_annotations(annotations, m_iters);
+        parse_all_fddb_annotations(annotations, m_iters);
 
-        for (unsigned i = 0; i < m_iters.size(); i ++)
+        for (unsigned i = 0; i < m_iters.size(); i ++) {
                 m_iters[i].switch_base_path(normalized);
+        }
 }
 
 e8util::fddb_samples::~fddb_samples()

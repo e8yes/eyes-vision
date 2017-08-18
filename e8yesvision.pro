@@ -32,7 +32,8 @@ SOURCES += src/main.cpp\
     src/morphology.cpp \
     src/imagesamples.cpp \
     src/distribution.cpp \
-    src/image.cpp
+    src/image.cpp \
+    test/testimagesamples.cpp
 
 HEADERS  += src/mainwindow.h \
     test/test.h \
@@ -54,7 +55,8 @@ HEADERS  += src/mainwindow.h \
     src/morphology.h \
     src/imagesamples.h \
     src/distribution.h \
-    src/image.h
+    src/image.h \
+    test/testimagesamples.h
 
 CONFIG += link_pkgconfig
 PKGCONFIG += opencv

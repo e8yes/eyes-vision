@@ -53,7 +53,7 @@ public:
                 std::vector<image_annotation>   annotations() const override;
                 cv::Mat3f                       image() const override;
                 void                            switch_base_path(std::string const& base_path);
-                void                            override_image(cv::Mat3f const& img);
+                void                            save_image(cv::Mat3f const& img);
                 void                            scale_regions(float x, float y);
         private:
                 std::vector<e8::ellipse>        m_regions;

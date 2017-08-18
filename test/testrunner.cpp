@@ -7,6 +7,7 @@
 #include "testscanner.h"
 #include "testcnnfeature.h"
 #include "testgenericextractor.h"
+#include "testimagesamples.h"
 
 
 test::test_runner::test_runner()
@@ -66,6 +67,7 @@ test::load(int argc, char** argv)
         runner.add("test_scanner", new test_scanner(), false);
         runner.add("test_cnnfeature", new test_cnnfeature(), false);
         runner.add("test_generic_extractor", new test_generic_extractor(), false);
+        runner.add("test_image_samples", new test_image_samples(), false);
 
         for (int i = 1; i < argc; i ++) {
                 if ((!std::strcmp(argv[i], "--test") || !std::strcmp(argv[i], "-t")) && (i + 1 < argc)) {
