@@ -24,7 +24,10 @@ test::test_fgbg_extractor::run() const
         I1.convertTo(bg, CV_32FC3, 1/255.0f);
 
         e8::fgbg_object_extractor extractor(bg, 1, 0.1f, 0.1f);
-        cv::Mat1b const& mask = extractor.compute_mask(fg);
+        void* intermediate = extractor.extract_intermediate(fg);
+        cv::Mat1b const& mask = extractor.extract_mapping(intermediate);
 
         cv::imwrite("mask.png", mask);
+
+        delete intermediate;
 }
