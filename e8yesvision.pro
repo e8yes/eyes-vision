@@ -33,7 +33,9 @@ SOURCES += src/main.cpp\
     src/imagesamples.cpp \
     src/distribution.cpp \
     src/image.cpp \
-    test/testimagesamples.cpp
+    test/testimagesamples.cpp \
+    src/fit.cpp \
+    src/extractor.cpp
 
 HEADERS  += src/mainwindow.h \
     test/test.h \
@@ -56,7 +58,9 @@ HEADERS  += src/mainwindow.h \
     src/imagesamples.h \
     src/distribution.h \
     src/image.h \
-    test/testimagesamples.h
+    test/testimagesamples.h \
+    src/fit.h \
+    src/extractor.h
 
 CONFIG += link_pkgconfig
 PKGCONFIG += opencv
