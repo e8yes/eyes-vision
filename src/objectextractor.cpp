@@ -4,15 +4,6 @@
 #include "objectextractor.h"
 
 
-e8::if_object_extractor::if_object_extractor()
-{
-}
-
-e8::if_object_extractor::~if_object_extractor()
-{
-}
-
-
 e8::fgbg_object_extractor::fgbg_object_extractor(cv::Mat3f const& background, unsigned num_comps, float threshold, float bg_scale):
         m_bg(background), m_n_comps(num_comps), m_thres(threshold), m_bg_scale(bg_scale)
 {
@@ -22,8 +13,8 @@ e8::fgbg_object_extractor::~fgbg_object_extractor()
 {
 }
 
-cv::Mat1b
-e8::fgbg_object_extractor::compute_mask(cv::Mat3f const& foreground) const
+void*
+e8::fgbg_object_extractor::extract_intermediate(cv::Mat3f const& foreground) const
 {
         // subtract out the background.
         cv::Mat3f extracted = cv::abs(foreground - m_bg*m_bg_scale);
@@ -44,51 +35,77 @@ e8::fgbg_object_extractor::compute_mask(cv::Mat3f const& foreground) const
         // non-maximal area suppression.
         cv::Mat1b id_map;
         std::vector<e8util::island> const& islands = e8util::islands(filtered, id_map);
-        cv::Mat1b suppressed = cv::Mat1b::zeros(filtered.size());
+        cv::Mat1b* suppressed = new cv::Mat1b(filtered.size());
+        suppressed->zeros(filtered.size());
         for (unsigned i = 0; i < m_n_comps && i < islands.size(); i ++) {
                 e8util::island const& island = islands[i];
                 for (unsigned j = 0; j < island.pixel_locs.size(); j ++) {
                         unsigned row = island.pixel_locs[j].x;
                         unsigned col = island.pixel_locs[j].y;
-                        suppressed.at<unsigned char>(row, col) = 0xFF;
+                        suppressed->at<unsigned char>(row, col) = 0xFF;
                 }
         }
-        return suppressed;
+        return static_cast<void*>(suppressed);
 }
 
-e8::box
-e8::fgbg_object_extractor::compute_box(cv::Mat3f const& img) const
+std::vector<e8::if_region*>
+e8::fgbg_object_extractor::extract_value(void* intermediate) const
 {
 }
 
-e8::ellipse
-e8::fgbg_object_extractor::compute_ellipse(cv::Mat3f const& img) const
+cv::Mat_<unsigned char>
+e8::fgbg_object_extractor::extract_mapping(void* intermediate) const
 {
+        return *static_cast<cv::Mat_<unsigned char>*>(intermediate);
 }
 
 
-e8::generic_object_extractor::generic_object_extractor(cnn_feature_extractor const& fe)
+
+
+e8::generic_object_extractor::generic_object_extractor(if_feature_fittable& fe):
+        m_fe(fe)
 {
+        m_svm = cv::ml::SVM::create();
+        m_svm->setType(cv::ml::SVM::C_SVC);
+        m_svm->setKernel(cv::ml::SVM::POLY);
+        m_svm->setDegree(2);
 }
 
 e8::generic_object_extractor::~generic_object_extractor()
 {
 }
 
-cv::Mat1b
-e8::generic_object_extractor::compute_mask(cv::Mat3f const& img) const
+float
+e8::generic_object_extractor::fit(cv::Mat3f const& x, std::vector<if_region*> const& y)
 {
 }
 
-e8::box
-e8::generic_object_extractor::compute_box(cv::Mat3f const& img) const
+void*
+e8::generic_object_extractor::extract_intermediate(cv::Mat3f const& x) const
 {
 }
 
-e8::ellipse
-e8::generic_object_extractor::compute_ellipse(cv::Mat3f const& img) const
+std::vector<e8::if_region*>
+e8::generic_object_extractor::extract_value(void* intermediate) const
 {
 }
+
+cv::Mat_<unsigned char>
+e8::generic_object_extractor::extract_mapping(void *intermediate) const
+{
+}
+
+void
+e8::generic_object_extractor::import_params(std::istream& data)
+{
+}
+
+void
+e8::generic_object_extractor::export_params(std::ostream& data) const
+{
+}
+
+
 
 
 e8::hog_dpm_object_extractor::hog_dpm_object_extractor()
@@ -99,17 +116,32 @@ e8::hog_dpm_object_extractor::~hog_dpm_object_extractor()
 {
 }
 
-cv::Mat1b
-e8::hog_dpm_object_extractor::compute_mask(cv::Mat3f const& img) const
+float
+e8::hog_dpm_object_extractor::fit(cv::Mat3f const& x, std::vector<if_region*> const& y)
 {
 }
 
-e8::box
-e8::hog_dpm_object_extractor::compute_box(cv::Mat3f const& img) const
+void*
+e8::hog_dpm_object_extractor::extract_intermediate(cv::Mat3f const& x) const
 {
 }
 
-e8::ellipse
-e8::hog_dpm_object_extractor::compute_ellipse(cv::Mat3f const& img) const
+std::vector<e8::if_region*>
+e8::hog_dpm_object_extractor::extract_value(void* intermediate) const
+{
+}
+
+cv::Mat_<unsigned char>
+e8::hog_dpm_object_extractor::extract_mapping(void *intermediate) const
+{
+}
+
+void
+e8::hog_dpm_object_extractor::import_params(std::istream& data)
+{
+}
+
+void
+e8::hog_dpm_object_extractor::export_params(std::ostream& data) const
 {
 }

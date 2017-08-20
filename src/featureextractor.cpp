@@ -2,17 +2,8 @@
 #include "featureextractor.h"
 
 
-e8::if_blind_feature_extractor::if_blind_feature_extractor()
-{
-}
-
-e8::if_blind_feature_extractor::~if_blind_feature_extractor()
-{
-}
-
-
-
-e8::cnn_feature_extractor::cnn_feature_extractor()
+e8::cnn_feature_extractor::cnn_feature_extractor(unsigned image_size):
+        m_img_size(image_size)
 {
 }
 
@@ -21,12 +12,22 @@ e8::cnn_feature_extractor::~cnn_feature_extractor()
 }
 
 float
-e8::cnn_feature_extractor::train()
+e8::cnn_feature_extractor::fit(cv::Mat3f const& x, std::vector<float> const& y)
+{
+}
+
+void*
+e8::cnn_feature_extractor::extract_intermediate(cv::Mat3f const& input) const
 {
 }
 
 std::vector<float>
-e8::cnn_feature_extractor::extract() const
+e8::cnn_feature_extractor::extract_value(void *intermediate) const
+{
+}
+
+cv::Mat_<float>
+e8::cnn_feature_extractor::extract_mapping(void* intermediate) const
 {
 }
 
